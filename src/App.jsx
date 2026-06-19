@@ -8,13 +8,9 @@ const PACHIRA_CSS = `
     .tracker-grid > *{min-width:0;overflow:hidden;}
     html,body,#root{width:100%;max-width:100%;margin:0;padding:0;text-align:left;border:none;}
     html,body{background:#ede4d8;overflow-x:hidden;max-width:100vw;}
-    body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-      background:
-        radial-gradient(ellipse 100% 55% at 5% 0%,rgba(240,220,170,0.95) 0%,transparent 55%),
-        radial-gradient(ellipse 80% 60% at 95% 100%,rgba(180,148,95,0.85) 0%,transparent 50%),
-        radial-gradient(ellipse 55% 70% at 45% 55%,rgba(218,198,148,0.5) 0%,transparent 60%);}
+    body::before{display:none;}
     body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
-      opacity:0.06;
+      opacity:0.05;
       background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' seed='8' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
       background-size:300px 300px;mix-blend-mode:multiply;}
     #root{display:flex;flex-direction:column;min-height:100vh;}
@@ -3001,7 +2997,6 @@ export default function App() {
             return (
               <>
                 <div className="hero-grain" style={{background:"linear-gradient(150deg,#3d4a1a 0%,#4a5820 55%,#3a4618 100%)",borderRadius:20,padding:"32px 36px",marginBottom:12,position:"relative",overflow:"hidden"}}>
-                  <div style={{position:"absolute",top:-40,right:-40,width:200,height:200,borderRadius:"50%",background:"#c8a88210",pointerEvents:"none"}}/>
                   <div style={{...S.sans,fontSize:"0.67rem",fontWeight:500,letterSpacing:"0.1em",textTransform:"uppercase",color:"#6b4c2a",marginBottom:10}}>
                     {realPeriod==="first"?"1st – 15th":"16th – end"} · money left
                   </div>
@@ -3037,8 +3032,6 @@ export default function App() {
           return (
             <div style={{marginBottom:24}}>
               <div className="hero-grain" style={{background:"linear-gradient(150deg,#3d4a1a 0%,#4a5820 55%,#3a4618 100%)",borderRadius:20,padding:"32px 36px",position:"relative",overflow:"hidden"}}>
-                <div style={{position:"absolute",top:-40,right:-40,width:200,height:200,borderRadius:"50%",background:"#c8a88210",pointerEvents:"none"}}/>
-                <div style={{position:"absolute",bottom:-50,left:-20,width:150,height:150,borderRadius:"50%",background:"#8faa8b0e",pointerEvents:"none"}}/>
                 {/* Account label + nav dots */}
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                   <div style={{...S.sans,fontSize:"0.67rem",fontWeight:500,letterSpacing:"0.1em",textTransform:"uppercase",color:"#6b4c2a"}}>
@@ -3078,7 +3071,6 @@ export default function App() {
                 borderRadius:16,padding:"18px 20px",marginBottom:8,
                 display:"flex",alignItems:"center",gap:14,
                 position:"relative",overflow:"hidden"}}>
-                <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:"#8faa8b0a",pointerEvents:"none"}}/>
                 <div style={{fontSize:"2rem",lineHeight:1,flexShrink:0}}>{w.emoji}</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{...S.sans,fontSize:"0.62rem",fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#6a8060",marginBottom:3}}>
@@ -3370,8 +3362,6 @@ export default function App() {
       <>
         {/* Progress banner */}
         <div className="landing-banner hero-grain" style={{background:"linear-gradient(150deg,#3d4a1a 0%,#4a5820 55%,#3a4618 100%)",borderRadius:18,padding:"32px 36px",marginBottom:28,position:"relative",overflow:"hidden"}}>
-          <div style={{position:"absolute",top:-40,right:-40,width:200,height:200,borderRadius:"50%",background:"rgba(120,160,80,0.1)",pointerEvents:"none"}}/>
-          <div style={{position:"absolute",bottom:-60,left:-20,width:160,height:160,borderRadius:"50%",background:"rgba(200,230,150,0.08)",pointerEvents:"none"}}/>
 
           {/* Header row: label + month/YTD toggle */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
@@ -3947,8 +3937,6 @@ export default function App() {
       <>
         {/* Landing banner */}
         <div className="landing-banner hero-grain" style={{background:"linear-gradient(150deg,#3d4a1a 0%,#4a5820 55%,#3a4618 100%)",borderRadius:18,padding:"32px 36px",marginBottom:24,position:"relative",overflow:"hidden"}}>
-          <div style={{position:"absolute",top:-40,right:-40,width:200,height:200,borderRadius:"50%",background:"rgba(120,160,80,0.1)",pointerEvents:"none"}}/>
-          <div style={{position:"absolute",bottom:-50,left:20,width:140,height:140,borderRadius:"50%",background:"rgba(200,230,150,0.08)",pointerEvents:"none"}}/>
           <div style={{...S.sans,fontSize:"0.67rem",fontWeight:500,letterSpacing:"0.12em",textTransform:"uppercase",color:"rgba(165,210,115,0.8)",marginBottom:8}}>committed savings</div>
           <div style={{...S.serif,fontSize:"3rem",color:"#8faa8b",lineHeight:1,marginBottom:6,letterSpacing:"-0.02em"}}>
             {fmt(totalSaved)}
