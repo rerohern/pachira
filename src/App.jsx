@@ -58,8 +58,8 @@ const PACHIRA_CSS = `
     .bbar{width:48px;min-width:32px;height:5px;background:#f0e8dc;border-radius:3px;overflow:hidden;flex-shrink:1;}
     .bamt{font-family:'DM Sans',sans-serif;font-size:0.68rem;color:#7a6048;text-align:right;min-width:0;flex-shrink:0;white-space:nowrap;}
     .bamt.ov{color:#b85050;font-weight:500;}
-    .qadd{width:100%;padding:10px 18px;border-radius:10px;border:1.5px solid #e0d0be;background:rgba(255,255,255,0.22);color:#4a3020;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:500;transition:all 0.15s;}
-    .qadd:hover{background:rgba(255,255,255,0.4);border-color:#c8a882;}
+    .qadd{width:100%;padding:10px 18px;border-radius:10px;border:1.5px solid #e0d0be;background:rgba(252,247,238,0.9);color:#4a3020;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:500;transition:all 0.15s;}
+    .qadd:hover{background:#f5ede4;border-color:#c8a882;}
     .acard{background:rgba(252,247,238,0.96);border-radius:16px;border:1px solid rgba(210,190,160,0.5);overflow:hidden;transition:box-shadow 0.2s;margin-bottom:12px;box-shadow:0 2px 16px rgba(60,35,10,0.08), 0 1px 0 rgba(255,255,248,0.9) inset;}
     .acard:hover{box-shadow:0 3px 14px rgba(44,33,22,0.09);}
     .acardh{padding:16px 18px;display:flex;align-items:center;gap:13px;cursor:pointer;user-select:none;}
@@ -556,7 +556,7 @@ function TxList({ txs, accounts, categories, onDelete, onEdit, emptyMsg="no tran
           </div>
         );
         return (
-          <div key={tx.id} style={{background:"rgba(195,182,162,0.4)",border:"0.5px solid rgba(255,245,220,0.5)",borderRadius:10,padding:"9px 13px",display:"flex",alignItems:"center",gap:9,overflow:"hidden",minWidth:0}}>
+          <div key={tx.id} style={{background:"rgba(248,242,228,0.9)",border:"0.5px solid rgba(210,195,165,0.5)",borderRadius:10,padding:"9px 13px",display:"flex",alignItems:"center",gap:9,overflow:"hidden",minWidth:0}}>
             {/* Mood dot */}
             {dotColor && <div style={{width:7,height:7,borderRadius:"50%",background:dotColor,flexShrink:0}}/>}
             <div style={{flex:1,minWidth:0,overflow:"hidden"}}>
@@ -1951,11 +1951,11 @@ function PaymentPlanModalInner({ paymentPlanModal, loans, now, curMonth, MONTHS,
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          <div style={{background:"rgba(195,182,162,0.4)",border:"0.5px solid rgba(255,245,220,0.5)",borderRadius:10,padding:"12px"}}>
+          <div style={{background:"rgba(248,242,228,0.9)",border:"0.5px solid rgba(210,195,165,0.5)",borderRadius:10,padding:"12px"}}>
             <div style={{...S.sans,fontSize:"0.65rem",color:"#7a5c3a",marginBottom:3}}>per month</div>
             <div style={{...S.serif,fontSize:"1.2rem",color:"#6b7c3f"}}>{fmt(monthly)}</div>
           </div>
-          <div style={{background:"rgba(195,182,162,0.4)",border:"0.5px solid rgba(255,245,220,0.5)",borderRadius:10,padding:"12px"}}>
+          <div style={{background:"rgba(248,242,228,0.9)",border:"0.5px solid rgba(210,195,165,0.5)",borderRadius:10,padding:"12px"}}>
             <div style={{...S.sans,fontSize:"0.65rem",color:"#7a5c3a",marginBottom:3}}>paid off by</div>
             <div style={{...S.serif,fontSize:"1rem",color:"#1e140a"}}>{deadline}</div>
           </div>
@@ -3295,7 +3295,7 @@ export default function App() {
                     ? {label:"allocated", color:"#7a9ec8"}
                     : null;
               return (
-                <div key={tx.id} style={{display:"flex",alignItems:"center",gap:9,background:"rgba(195,182,162,0.4)",border:"0.5px solid rgba(255,245,220,0.5)",borderRadius:10,padding:"9px 13px",marginBottom:7}}>
+                <div key={tx.id} style={{display:"flex",alignItems:"center",gap:9,background:"rgba(248,242,228,0.9)",border:"0.5px solid rgba(210,195,165,0.5)",borderRadius:10,padding:"9px 13px",marginBottom:7}}>
                   {dotClr&&<div style={{width:7,height:7,borderRadius:"50%",background:dotClr,flexShrink:0}}/>}
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
