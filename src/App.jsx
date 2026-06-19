@@ -3073,7 +3073,7 @@ export default function App() {
                 position:"relative",overflow:"hidden"}}>
                 <div style={{fontSize:"2rem",lineHeight:1,flexShrink:0}}>{w.emoji}</div>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{...S.sans,fontSize:"0.62rem",fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#6a8060",marginBottom:3}}>
+                  <div style={{...S.sans,fontSize:"0.62rem",fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(220,235,180,0.85)",marginBottom:3}}>
                     {w.type==="loan"?"loan paid off 🎉":"goal reached 🎉"}
                   </div>
                   <div style={{...S.serif,fontSize:"1.05rem",color:"#faf6f0",marginBottom:2}}>
@@ -3365,7 +3365,7 @@ export default function App() {
 
           {/* Header row: label + month/YTD toggle */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-            <div style={{...S.sans,fontSize:"0.67rem",fontWeight:500,letterSpacing:"0.12em",textTransform:"uppercase",color:"#4a2e18"}}>
+            <div style={{...S.sans,fontSize:"0.67rem",fontWeight:500,letterSpacing:"0.12em",textTransform:"uppercase",color:"rgba(220,235,180,0.85)"}}>
               {hasActivity ? `progress · ${label}` : `${label} · so far`}
             </div>
             <div style={{display:"flex",gap:2,background:"#3d2f22",borderRadius:7,padding:2}}>
@@ -3373,7 +3373,7 @@ export default function App() {
                 <button key={m.id} onClick={()=>setProgressMode(m.id)}
                   style={{...S.sans,fontSize:"0.65rem",fontWeight:500,padding:"3px 10px",borderRadius:5,border:"none",cursor:"pointer",
                     background:progressMode===m.id?"#6b7c3f":"transparent",
-                    color:progressMode===m.id?"#faf6f0":"#8a7060",transition:"all 0.15s"}}>
+                    color:progressMode===m.id?"#faf6f0":"rgba(220,235,180,0.7)",transition:"all 0.15s"}}>
                   {m.label}
                 </button>
               ))}
@@ -3386,7 +3386,7 @@ export default function App() {
               <div style={{...S.serif,fontSize:"3rem",color:"#dff0c0",lineHeight:1,marginBottom:4,letterSpacing:"-0.02em"}}>
                 +{fmt(total)}
               </div>
-              <div style={{...S.sans,fontSize:"0.78rem",color:"#6a8060",marginBottom:16}}>
+              <div style={{...S.sans,fontSize:"0.78rem",color:"rgba(220,235,180,0.8)",marginBottom:16}}>
                 toward your future 🌱
               </div>
             </>
@@ -3435,7 +3435,7 @@ export default function App() {
           <div>
             {editingProgress ? (
               <div style={{background:"#3d2f22",borderRadius:10,padding:"12px 14px"}}>
-                <div style={{...S.sans,fontSize:"0.67rem",color:"#4a2e18",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}}>what counts as progress?</div>
+                <div style={{...S.sans,fontSize:"0.67rem",color:"rgba(220,235,180,0.85)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}}>what counts as progress?</div>
                 {[
                   {key:"savings", label:"💰 deposits"},
                   {key:"goals",   label:"🎯 transfers to goals"},
