@@ -159,7 +159,7 @@ export function suggestedPace(goal, txnsSnapshot, { now, txSpend: _txSpend }) {
     if (!isNaN(parsed)) {
       const diff =
         (parsed.getFullYear() - now.getFullYear()) * 12 +
-        (parsed.getMonth() - now.getMonth());
+        (parsed.getMonth() - now.getMonth()) + 1; // +1 to include the deadline month
       monthsLeft = Math.max(1, diff);
     }
   }
