@@ -5747,9 +5747,20 @@ export default function App() {
             setPBudgets(p=>({...p,[`${curMonth}_${thisPeriod}`]:parsed}));
             setPPay(p=>({...p,[`${curMonth}_${thisPeriod}`]:inc}));
 
-            // No cross-period sync — each period is independent.
-            // Users set income and budget for each period separately.
-            // Monthly view shows the combined total of both periods.
+            // Cross-period sync is one-directional: saving 1st-15th auto-fills 16th-end
+            // as (monthly - first). But saving 16th-end never touches 1st-15th,
+            // so you can freely adjust second-half income/budget independently.
+            if (thisPeriod === "first") {
+              const monthlyBudgetsForSync = {...actBudg, ...(mBudgets[curMonth]||{})};
+              const otherOverrides = {};
+              Object.entries(parsed).forEach(([k,v])=>{
+                const monthly = monthlyBudgetsForSync[k] ?? 0;
+                otherOverrides[k] = Math.max(0, Math.round((monthly - v) * 100) / 100);
+              });
+              setPBudgets(p=>({...p,[`${curMonth}_second`]:otherOverrides}));
+              const monthlyInc = mIncome[curMonth] ?? DEF_INCOME;
+              setPPay(p=>({...p,[`${curMonth}_second`]:Math.max(0, monthlyInc - inc)}));
+            }
 
             if(newCatOrder) setCatOrder(newCatOrder);
 
