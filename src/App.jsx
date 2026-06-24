@@ -5696,7 +5696,7 @@ export default function App() {
           getGoalPace={(goalKey)=>getPace(goalKey)}
           splitRules={splitRules}
           monthlyBudgets={actBudg}
-          isFirstHalfLocked={showBE==="first" && new Date().getDate() > 15}
+          isFirstHalfLocked={showBE==="first" && curMonth === now.getMonth() && new Date().getDate() > 15}
           rolloverMap={(()=>{
             const map = {};
             const currTxs = [...(txns[`${mk}_first`]||[]),...(txns[`${mk}_second`]||[])];
