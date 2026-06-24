@@ -5748,17 +5748,20 @@ export default function App() {
             setPPay(p=>({...p,[`${curMonth}_${thisPeriod}`]:inc}));
 
             // Cross-period sync is one-directional: saving 1st-15th auto-fills 16th-end
-            // as (monthly - first). But saving 16th-end never touches 1st-15th,
-            // so you can freely adjust second-half income/budget independently.
+            // as (monthly - first). Monthly = what was previously set across both periods.
             if (thisPeriod === "first") {
-              const monthlyBudgetsForSync = {...actBudg, ...(mBudgets[curMonth]||{})};
+              const prevFirst  = pBudgets[`${curMonth}_first`]  || {};
+              const prevSecond = pBudgets[`${curMonth}_second`] || {};
               const otherOverrides = {};
               Object.entries(parsed).forEach(([k,v])=>{
-                const monthly = monthlyBudgetsForSync[k] ?? 0;
+                // Monthly total = previous first + previous second (or actBudg fallback)
+                const prevMonthly = (prevFirst[k] ?? 0) + (prevSecond[k] ?? 0);
+                const monthly = prevMonthly > 0 ? prevMonthly : (actBudg[k] ?? 0);
                 otherOverrides[k] = Math.max(0, Math.round((monthly - v) * 100) / 100);
               });
               setPBudgets(p=>({...p,[`${curMonth}_second`]:otherOverrides}));
-              const monthlyInc = mIncome[curMonth] ?? DEF_INCOME;
+              const monthlyInc = (pPay[`${curMonth}_first`] ?? Math.round((mIncome[curMonth]??DEF_INCOME)/2))
+                               + (pPay[`${curMonth}_second`] ?? Math.round((mIncome[curMonth]??DEF_INCOME)/2));
               setPPay(p=>({...p,[`${curMonth}_second`]:Math.max(0, monthlyInc - inc)}));
             }
 
