@@ -1004,6 +1004,13 @@ function AddTxPage({ categories, accounts, curMonth, period, onAdd, onClose, pre
   const todayDay = new Date().getDate();
   const autoPeriod = todayDay <= 15 ? "first" : "second";
 
+  // Derive which pay period a date falls into, based on day-of-month
+  function periodForDate(dateStr) {
+    if (!dateStr) return autoPeriod;
+    const day = parseInt(dateStr.split("-")[2], 10);
+    return day <= 15 ? "first" : "second";
+  }
+
   const mkBlank = (sharedDate) => ({
     id: Math.random().toString(36).slice(2,9),
     date: sharedDate || today,
@@ -1014,7 +1021,7 @@ function AddTxPage({ categories, accounts, curMonth, period, onAdd, onClose, pre
     to_account_id: "",
     money_flow: "expense",
     feeling: "necessary",
-    _period: autoPeriod,
+    _period: periodForDate(sharedDate || today),
   });
 
   const [txList, setTxList] = useState([mkBlank(today)]);
@@ -1167,7 +1174,7 @@ function AddTxPage({ categories, accounts, curMonth, period, onAdd, onClose, pre
                 <div>
                   <div style={{...S.sans,fontSize:"0.62rem",fontWeight:500,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7a5c3a",marginBottom:4}}>date</div>
                   <input type="date" value={sharedDate}
-                    onChange={e=>{ setSharedDate(e.target.value); setTxList(prev=>prev.map(t=>({...t,date:e.target.value}))); }}
+                    onChange={e=>{ setSharedDate(e.target.value); setTxList(prev=>prev.map(t=>({...t,date:e.target.value,_period:periodForDate(e.target.value)}))); }}
                     style={{...S.input}}/>
                 </div>
 
@@ -1308,7 +1315,7 @@ function AddTxPage({ categories, accounts, curMonth, period, onAdd, onClose, pre
             <input style={{...S.input,flex:1,maxWidth:160}} type="date" value={sharedDate}
               onChange={e=>{
                 setSharedDate(e.target.value);
-                setTxList(prev=>prev.map(t=>({...t,date:e.target.value})));
+                setTxList(prev=>prev.map(t=>({...t,date:e.target.value,_period:periodForDate(e.target.value)})));
               }}/>
           </div>
         </div>
@@ -2997,7 +3004,7 @@ export default function App() {
             return (
               <>
                 <div className="hero-grain" style={{background:"linear-gradient(150deg,#3d4a1a 0%,#4a5820 55%,#3a4618 100%)",borderRadius:20,padding:"32px 36px",marginBottom:12,position:"relative",overflow:"hidden"}}>
-                  <div style={{...S.sans,fontSize:"0.67rem",fontWeight:500,letterSpacing:"0.1em",textTransform:"uppercase",color:"#6b4c2a",marginBottom:10}}>
+                  <div style={{...S.sans,fontSize:"0.67rem",fontWeight:500,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(220,235,180,0.85)",marginBottom:10}}>
                     {realPeriod==="first"?"1st – 15th":"16th – end"} · money left
                   </div>
                   <div style={{...S.serif,fontSize:"3.5rem",color:over2?"#c88b8b":"#c8a882",lineHeight:1,marginBottom:12,letterSpacing:"-0.02em"}}>
@@ -3034,7 +3041,7 @@ export default function App() {
               <div className="hero-grain" style={{background:"linear-gradient(150deg,#3d4a1a 0%,#4a5820 55%,#3a4618 100%)",borderRadius:20,padding:"32px 36px",position:"relative",overflow:"hidden"}}>
                 {/* Account label + nav dots */}
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                  <div style={{...S.sans,fontSize:"0.67rem",fontWeight:500,letterSpacing:"0.1em",textTransform:"uppercase",color:"#6b4c2a"}}>
+                  <div style={{...S.sans,fontSize:"0.67rem",fontWeight:500,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(220,235,180,0.85)"}}>
                     {acct.name} · {realPeriod==="first"?"1st–15th":"16th–end"}
                   </div>
                   {paycheckAccts.length>1&&(
