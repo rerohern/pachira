@@ -3360,9 +3360,9 @@ export default function App() {
     const label = progressMode==="month" ? MONTHS[realMonth] : `Jan – ${MONTHS[realMonth].slice(0,3)}`;
 
     const progressLines = [
-      progressItems.savings && deposited>0  && { label:"deposited",           val:deposited,     color:"#8faa8b" },
-      progressItems.goals   && savedToGoals>0 && { label:"saved to goals",     val:savedToGoals,  color:"#6b7c3f" },
-      progressItems.loans   && paidLoans>0  && { label:"paid toward loans",   val:paidLoans,     color:"#a89bc8" },
+      progressItems.savings && deposited>0  && { label:"deposited",           val:deposited,     color:"#a8d4a0" },
+      progressItems.goals   && savedToGoals>0 && { label:"saved to goals",     val:savedToGoals,  color:"#a8d4a0" },
+      progressItems.loans   && paidLoans>0  && { label:"paid toward loans",   val:paidLoans,     color:"#c8b8e8" },
     ].filter(Boolean);
 
     return (
@@ -3426,10 +3426,10 @@ export default function App() {
           {/* Context stats */}
           <div style={{display:"flex",gap:24,flexWrap:"wrap",marginBottom:12}}>
             {[
-              {label:"liquid assets", val:fmt(liquid),  color:"#8faa8b"},
-              {label:"total debt",    val:fmt(debt),     color: debt>0?"#c88b8b":"#8faa8b"},
-              {label:"credit card",   val:fmt(ccDebt),   color: ccDebt>0?"#c88b8b":"#c8b89a"},
-              {label:"loans",         val:fmt(loanDebt), color: loanDebt>0?"#c88b8b":"#c8b89a"},
+              {label:"liquid assets", val:fmt(liquid),  color:"#a8d4a0"},
+              {label:"total debt",    val:fmt(debt),     color: debt>0?"#e8a0a0":"#a8d4a0"},
+              {label:"credit card",   val:fmt(ccDebt),   color: ccDebt>0?"#e8a0a0":"rgba(220,235,180,0.85)"},
+              {label:"loans",         val:fmt(loanDebt), color: loanDebt>0?"#e8a0a0":"rgba(220,235,180,0.85)"},
             ].map(({label,val,color})=>(
               <div key={label}>
                 <div style={{...S.sans,fontSize:"0.62rem",color:"#8fa86a",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>{label}</div>
@@ -3955,19 +3955,19 @@ export default function App() {
             {totalLoanOwed > 0 && (
               <div>
                 <div style={{...S.sans,fontSize:"0.62rem",color:"#8fa86a",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>loans remaining</div>
-                <div style={{...S.serif,fontSize:"1.1rem",color:"#6b4c2a"}}>{fmt(totalLoanOwed)}</div>
+                <div style={{...S.serif,fontSize:"1.1rem",color:"#e8a0a0"}}>{fmt(totalLoanOwed)}</div>
               </div>
             )}
             {activeHabits > 0 && (
               <div>
                 <div style={{...S.sans,fontSize:"0.62rem",color:"#8fa86a",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>habits today</div>
-                <div style={{...S.serif,fontSize:"1.1rem",color:"#8a5c2a"}}>{habitsDoneToday} / {activeHabits}</div>
+                <div style={{...S.serif,fontSize:"1.1rem",color:"#f0ead8"}}>{habitsDoneToday} / {activeHabits}</div>
               </div>
             )}
             {deferred.length > 0 && (
               <div>
                 <div style={{...S.sans,fontSize:"0.62rem",color:"#8fa86a",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>on wishlist</div>
-                <div style={{...S.serif,fontSize:"1.1rem",color:"#6b4c2a"}}>{deferred.length} item{deferred.length!==1?"s":""}</div>
+                <div style={{...S.serif,fontSize:"1.1rem",color:"#f0ead8"}}>{deferred.length} item{deferred.length!==1?"s":""}</div>
               </div>
             )}
           </div>
