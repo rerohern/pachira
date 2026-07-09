@@ -15,6 +15,11 @@ const PACHIRA_CSS = `
       background-size:300px 300px;mix-blend-mode:multiply;}
     #root{display:flex;flex-direction:column;min-height:100vh;}
     input,select,textarea{font-size:16px !important;}
+    /* Focus styles — WCAG 2.4.7 */
+    *:focus{outline:none;}
+    *:focus-visible{outline:2px solid #6b7c3f;outline-offset:2px;border-radius:4px;}
+    button:focus-visible{outline:2px solid #6b7c3f;outline-offset:2px;border-radius:6px;}
+    input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #6b7c3f;outline-offset:0;border-radius:8px;}
     ::-webkit-scrollbar{width:5px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:#c8a882;border-radius:3px;}
 
     /* ── Desktop layout ── */
@@ -47,12 +52,12 @@ const PACHIRA_CSS = `
     .mood-breakdown{flex:1;padding-left:16px;display:flex;flex-direction:column;gap:10px;}
     .cv{font-family:'DM Serif Display',serif;font-size:2rem;letter-spacing:-0.02em;line-height:1;}
     .cv.g{color:#3d6b4f;} .cv.r{color:#b85050;}
-    .cs{font-family:'DM Sans',sans-serif;font-size:0.72rem;color:#a8906e;margin-top:3px;}
+    .cs{font-family:'DM Sans',sans-serif;font-size:0.72rem;color:#7a5c3a;margin-top:3px;}
     .brow{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid #f5ede4;overflow:hidden;max-width:100%;}
     .brow:last-child{border-bottom:none;}
     .bn{font-family:'DM Sans',sans-serif;font-size:0.81rem;color:#4a3828;flex:1;text-transform:capitalize;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
     .bbar{width:48px;min-width:32px;height:5px;background:#f0e8dc;border-radius:3px;overflow:hidden;flex-shrink:1;}
-    .bamt{font-family:'DM Sans',sans-serif;font-size:0.68rem;color:#7a6048;text-align:right;min-width:0;flex-shrink:0;white-space:nowrap;}
+    .bamt{font-family:'DM Sans',sans-serif;font-size:0.68rem;color:#4a3020;text-align:right;min-width:0;flex-shrink:0;white-space:nowrap;}
     .bamt.ov{color:#b85050;font-weight:500;}
     .qadd{width:100%;padding:10px 18px;border-radius:10px;border:1.5px solid #e0d0be;background:rgba(252,247,238,0.9);color:#4a3020;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:500;transition:all 0.15s;}
     .qadd:hover{background:#f5ede4;border-color:#c8a882;}
@@ -255,10 +260,10 @@ function SectionTitle({ children, action }) {
 }
 
 function FormRow({ children }) { return <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{children}</div>; }
-function FormGroup({ label, children }) {
+function FormGroup({ label, children, htmlFor }) {
   return (
     <div style={{display:"flex",flexDirection:"column",gap:3}}>
-      <div style={{...S.sans,fontSize:"0.67rem",fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase",color:"#7a5c3a"}}>{label}</div>
+      <label htmlFor={htmlFor} style={{...S.sans,fontSize:"0.67rem",fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase",color:"#7a5c3a"}}>{label}</label>
       {children}
     </div>
   );
@@ -282,12 +287,19 @@ function PriorityBadge({ priority }) {
 }
 
 function Modal({ title, subtitle, onClose, footer, children, stickyBar }) {
+  useEffect(()=>{
+    const handler = e => { if(e.key==="Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return ()=>document.removeEventListener("keydown", handler);
+  }, [onClose]);
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(44,33,22,0.45)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
-      onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
-      <div style={{background:"#faf6f0",borderRadius:"20px 20px 0 0",width:"100%",maxWidth:560,maxHeight:"92vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 -8px 40px rgba(44,33,22,0.18)"}}>
+      onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}
+      role="presentation">
+      <div role="dialog" aria-modal="true" aria-labelledby="modal-title"
+        style={{background:"#faf6f0",borderRadius:"20px 20px 0 0",width:"100%",maxWidth:560,maxHeight:"92vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 -8px 40px rgba(44,33,22,0.18)"}}>
         <div style={{padding:"18px 20px 14px",borderBottom:"1px solid #e8ddd0",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-          <div style={{...S.serif,fontSize:"1.15rem",flex:1}}>{title}</div>
+          <div id="modal-title" style={{...S.serif,fontSize:"1.15rem",flex:1}}>{title}</div>
           {subtitle && <div style={{...S.sans,fontSize:"0.72rem",color:"#7a5c3a"}}>{subtitle}</div>}
           <button style={{background:"none",border:"none",cursor:"pointer",fontSize:"1.2rem",color:"#7a5c3a"}} onClick={onClose}>✕</button>
         </div>
@@ -2770,6 +2782,9 @@ export default function App() {
               return (
                 <div key={item}>
                   <div className="brow" onClick={()=>setExpanded(isOpen?null:expandKey)}
+                    role={hasTx?"button":undefined} tabIndex={hasTx?0:undefined}
+                    onKeyDown={hasTx?(e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setExpanded(isOpen?null:expandKey);}})  :undefined}
+                    aria-expanded={hasTx?isOpen:undefined}
                     style={{cursor:hasTx?"pointer":"default",userSelect:"none",
                       background:isOpen?"rgba(143,170,139,0.12)":paid?"rgba(143,170,139,0.08)":"transparent",
                       padding:"6px 13px",borderRadius:isOpen?"6px 6px 0 0":0,
@@ -3131,7 +3146,7 @@ export default function App() {
                 <div key={c.item} style={{background:"rgba(252,247,238,0.96)",border:"1px solid rgba(210,190,160,0.5)",borderRadius:12,padding:"12px 14px",boxShadow:"0 2px 16px rgba(60,35,10,0.08), 0 1px 0 rgba(255,255,248,0.9) inset"}}>
                   <div style={{...S.sans,fontSize:"0.65rem",fontWeight:500,letterSpacing:"0.04em",textTransform:"capitalize",color:"#7a5c3a",marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.item}</div>
                   <div style={{...S.serif,fontSize:"1.3rem",color:"#4a6b42",lineHeight:1}}>{fmt(c.left)}</div>
-                  <div style={{...S.sans,fontSize:"0.62rem",color:"#a8906e"}}>of {fmt(c.budget)} left</div>
+                  <div style={{...S.sans,fontSize:"0.62rem",color:"#7a5c3a"}}>of {fmt(c.budget)} left</div>
                 </div>
               ))}
             </div>
@@ -3483,7 +3498,10 @@ export default function App() {
           const icon=isCredit?"💳":isSav?"🪙":"🏦";
           return (
             <div key={acct.id} className="acard" style={{background:"rgba(252,247,238,0.96)",border:"1px solid rgba(210,190,160,0.5)",boxShadow:"0 2px 16px rgba(60,35,10,0.08), 0 1px 0 rgba(255,255,248,0.9) inset"}}>
-              <div className="acardh" onClick={()=>setExpAcct(isOpen?null:acct.id)}>
+              <div className="acardh" onClick={()=>setExpAcct(isOpen?null:acct.id)}
+                role="button" tabIndex={0} aria-expanded={isOpen}
+                aria-label={`${acct.name} ${acct.label} — ${isOpen?"collapse":"expand"}`}
+                onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setExpAcct(isOpen?null:acct.id);}}}>
                 <div style={{width:40,height:40,borderRadius:10,background:acct.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",flexShrink:0}}>{icon}</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{...S.serif,fontSize:"1rem"}}>{acct.name}</div>
@@ -4014,10 +4032,12 @@ export default function App() {
               : "#8faa8b";
             const paceUrgent = pace?.status==="urgent" && g.priority==="high";
             return (
-              <div key={key} className="gcard" style={{background:"rgba(252,247,238,0.96)",border:"1px solid rgba(210,190,160,0.5)",boxShadow:"0 2px 16px rgba(60,35,10,0.08), 0 1px 0 rgba(255,255,248,0.9) inset"}} draggable={dp.draggable}
+              <div key={key} className="gcard"
+                style={{background:"rgba(252,247,238,0.96)",boxShadow:"0 2px 16px rgba(60,35,10,0.08), 0 1px 0 rgba(255,255,248,0.9) inset",
+                  ...dp.style_drag,border:`1px solid ${done?"#8faa8b44":paceUrgent?"#c8a88266":"#e8ddd0"}`}}
+                draggable={dp.draggable}
                 onDragStart={dp.onDragStart} onDragOver={dp.onDragOver} onDrop={dp.onDrop} onDragEnd={dp.onDragEnd}
-                data-dragkey={key}
-                style={{...dp.style_drag,border:`1px solid ${done?"#8faa8b44":paceUrgent?"#c8a88266":"#e8ddd0"}`}}>
+                data-dragkey={key}>
                 <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:12}}>
                   <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,flexShrink:0}}>
                     <div style={{fontSize:"1.5rem",lineHeight:1}}>{g.emoji||"🎯"}</div>
