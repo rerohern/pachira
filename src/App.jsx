@@ -3328,6 +3328,24 @@ export default function App() {
         )}
 
         <div className="note">money loves you back 💛</div>
+
+        {isMobile && (
+          <div style={{display:"flex",gap:8,marginTop:12,justifyContent:"center"}}>
+            <button onClick={exportData}
+              style={{...S.sans,fontSize:"0.75rem",padding:"8px 16px",borderRadius:10,
+                border:"1px solid rgba(210,190,160,0.6)",background:"rgba(252,247,238,0.96)",
+                color:"#4a3020",cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+              ⬇ export backup
+            </button>
+            <label style={{...S.sans,fontSize:"0.75rem",padding:"8px 16px",borderRadius:10,
+              border:"1px solid rgba(210,190,160,0.6)",background:"rgba(252,247,238,0.96)",
+              color:"#4a3020",cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+              ⬆ import backup
+              <input type="file" accept=".json" style={{display:"none"}}
+                onChange={e=>{importData(e.target.files[0]); e.target.value="";}}/>
+            </label>
+          </div>
+        )}
       </>
     );
   }
@@ -5457,12 +5475,7 @@ export default function App() {
         </Card>
 
         <div className="note" style={{marginTop:4}}>2026 is your year 🌿</div>
-        <div style={{textAlign:"center",marginTop:6,display:"flex",justifyContent:"center",gap:12,flexWrap:"wrap"}}>
-          <button onClick={exportData} style={{...S.sans,fontSize:"0.7rem",color:"#6b4c2a",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>⬇ export backup</button>
-          <label style={{...S.sans,fontSize:"0.7rem",color:"#6b4c2a",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>
-            ⬆ import backup
-            <input type="file" accept=".json" style={{display:"none"}} onChange={e=>{importData(e.target.files[0]); e.target.value="";}}/>
-          </label>
+        <div style={{textAlign:"center",marginTop:6}}>
           <button onClick={resetAll} style={{...S.sans,fontSize:"0.7rem",color:"#6b4c2a",background:"none",border:"none",cursor:"pointer",textDecoration:"underline",opacity:0.5}}>reset all data</button>
         </div>
       </>
