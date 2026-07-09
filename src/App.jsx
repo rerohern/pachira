@@ -1930,6 +1930,67 @@ function MonthView({ p1txs, p2txs, income, cats, pBudgets, actBudg, curMonth, ye
   );
 }
 
+// ── YearArchiveSection — collapsible year summary ────────────────────────────
+function YearArchiveSection({ year, data, fmt, S }) {
+  const [open, setOpen] = React.useState(false);
+  const goals   = Object.entries(data.goals||{});
+  const loans   = Object.entries(data.loans||{});
+  const wishlist = data.wishlist||[];
+  const total = goals.length + loans.length + wishlist.length;
+  return (
+    <div style={{marginBottom:10}}>
+      <button onClick={()=>setOpen(p=>!p)}
+        style={{...S.sans,fontSize:"0.78rem",fontWeight:500,color:"#4a3020",background:"none",
+          border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"6px 0",width:"100%",textAlign:"left"}}>
+        <span style={{fontSize:"0.65rem"}}>{open?"▼":"▶"}</span>
+        {year}
+        <span style={{...S.sans,fontSize:"0.67rem",color:"#7a5c3a",fontWeight:400,marginLeft:4}}>
+          {goals.length} goal{goals.length!==1?"s":""} · {loans.length} loan{loans.length!==1?"s":""} · {wishlist.length} wishlist
+        </span>
+      </button>
+      {open&&(
+        <div style={{paddingLeft:12,display:"flex",flexDirection:"column",gap:6,marginTop:4}}>
+          {goals.map(([key,g])=>(
+            <div key={key} style={{background:"rgba(252,247,238,0.8)",borderRadius:10,padding:"9px 12px",
+              border:"0.5px solid rgba(210,190,160,0.4)",display:"flex",alignItems:"center",gap:10,opacity:0.8}}>
+              <span style={{fontSize:"1.1rem"}}>{g.emoji||"🎯"}</span>
+              <div style={{flex:1}}>
+                <div style={{...S.sans,fontSize:"0.8rem",fontWeight:500,color:"#2a1f14",textTransform:"capitalize"}}>{key}</div>
+                <div style={{...S.sans,fontSize:"0.65rem",color:"#4a7c59"}}>✓ goal reached · {fmt(g.target||0)}</div>
+              </div>
+            </div>
+          ))}
+          {loans.map(([key,g])=>(
+            <div key={key} style={{background:"rgba(252,247,238,0.8)",borderRadius:10,padding:"9px 12px",
+              border:"0.5px solid rgba(210,190,160,0.4)",display:"flex",alignItems:"center",gap:10,opacity:0.8}}>
+              <span style={{fontSize:"1.1rem"}}>💳</span>
+              <div style={{flex:1}}>
+                <div style={{...S.sans,fontSize:"0.8rem",fontWeight:500,color:"#2a1f14"}}>{g.name||key.replace("loan_","")}</div>
+                <div style={{...S.sans,fontSize:"0.65rem",color:"#4a7c59"}}>✓ paid off · {fmt(g.target||0)}</div>
+              </div>
+            </div>
+          ))}
+          {wishlist.map((item,i)=>{
+            const howEmoji = item.fulfilledHow==="cash"?"💵":item.fulfilledHow==="gift"?"🎁":"🛍️";
+            const howLabel = item.fulfilledHow==="cash"?"paid cash":item.fulfilledHow==="gift"?"gift":"purchased";
+            return (
+              <div key={item.id||i} style={{background:"rgba(252,247,238,0.8)",borderRadius:10,padding:"9px 12px",
+                border:"0.5px solid rgba(210,190,160,0.4)",display:"flex",alignItems:"center",gap:10,opacity:0.8}}>
+                <span style={{fontSize:"1.1rem"}}>{howEmoji}</span>
+                <div style={{flex:1}}>
+                  <div style={{...S.sans,fontSize:"0.8rem",fontWeight:500,color:"#2a1f14"}}>{item.name}</div>
+                  <div style={{...S.sans,fontSize:"0.65rem",color:"#7a5c3a"}}>{howLabel}{item.price?` · up to ${fmt(parseFloat(item.price))}`:""}</div>
+                </div>
+              </div>
+            );
+          })}
+          {total===0&&<div style={{...S.sans,fontSize:"0.72rem",color:"#a8906e",fontStyle:"italic"}}>nothing archived this year</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── PaymentPlanModalInner — proper component so hooks work ───────────────────
 function PaymentPlanModalInner({ paymentPlanModal, loans, now, curMonth, MONTHS, fmt, S, addToRolloverPlan, setLoans, onClose }) {
   const { account, remaining, existingPlanKey } = paymentPlanModal;
@@ -2218,6 +2279,8 @@ export default function App() {
   const [cats,      setCats]      = useState(DEF_CATS);
   const [catOrder,  setCatOrder]  = useState(["essentials","savings","loans","misc"]);
   const [archived,  setArchived]  = useState({});
+  const [yearArchive, setYearArchive] = useState({}); // {2025:{goals:{},loans:{},wishlist:[]}, ...}
+  const [wishlistArchive, setWishlistArchive] = useState([]); // fulfilled wishlist items this year
   const [goalOrder, setGoalOrder] = useState(["emergency fund","summer trip","new laptop"]);
   const [mBudgets,  setMBudgets]  = useState({});
   const [mIncome,   setMIncome]   = useState({});
@@ -2329,6 +2392,8 @@ export default function App() {
         if (d.pinnedTreats) setPinnedTreats(d.pinnedTreats);
         if (d.recentWins)  setRecentWins(d.recentWins.filter(w=>Date.now()-w.at < 24*60*60*1000));
         if (d.pinnedBudgetItems) setPinnedBudgetItems(d.pinnedBudgetItems);
+        if (d.yearArchive)       setYearArchive(d.yearArchive);
+        if (d.wishlistArchive)   setWishlistArchive(d.wishlistArchive);
         if (d.yearPlan)  setYearPlan(d.yearPlan);
         if (d.splitRules) setSplitRules(d.splitRules);
       }
@@ -2341,7 +2406,7 @@ export default function App() {
     if (!loaded) return;
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() =>
-      saveData({txns,accounts,goals,loans,cats,catOrder,archived,goalOrder,mBudgets,mIncome,pBudgets,pPay,curMonth,habits,deferred,yearPlan,splitRules,pinnedTreats,recentWins,pinnedBudgetItems}), 700);
+      saveData({txns,accounts,goals,loans,cats,catOrder,archived,goalOrder,mBudgets,mIncome,pBudgets,pPay,curMonth,habits,deferred,yearPlan,splitRules,pinnedTreats,recentWins,pinnedBudgetItems,yearArchive,wishlistArchive}), 700);
     return () => clearTimeout(timerRef.current);
   }, [loaded,txns,accounts,goals,loans,cats,catOrder,archived,goalOrder,mBudgets,mIncome,pBudgets,pPay,curMonth,habits,deferred,yearPlan,splitRules]);
 
@@ -2627,7 +2692,7 @@ export default function App() {
   function exportData() {
     const data = {txns,accounts,goals,loans,cats,catOrder,archived,goalOrder,
       mBudgets,mIncome,pBudgets,pPay,curMonth,habits,deferred,yearPlan,
-      splitRules,pinnedTreats,recentWins,pinnedBudgetItems};
+      splitRules,pinnedTreats,recentWins,pinnedBudgetItems,yearArchive,wishlistArchive};
     const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
@@ -4178,6 +4243,48 @@ export default function App() {
               })}
             </div>
           )}
+
+          {/* ── Close out year ───────────────────────────────────────────── */}
+          <div style={{marginTop:20,padding:"14px 16px",background:"rgba(252,247,238,0.96)",borderRadius:12,border:"1px dashed rgba(200,168,130,0.5)"}}>
+            <div style={{...S.sans,fontSize:"0.72rem",fontWeight:500,color:"#4a3020",marginBottom:4}}>🗓 close out {now.getFullYear()}</div>
+            <div style={{...S.sans,fontSize:"0.67rem",color:"#7a5c3a",marginBottom:10,lineHeight:1.4}}>
+              Seals completed goals, paid loans, and fulfilled wishlist items into the {now.getFullYear()} archive. In-progress goals carry forward.
+            </div>
+            <button onClick={()=>{
+              if (!window.confirm(`Close out ${now.getFullYear()}? Archived goals and loans will be sealed. This can't be undone.`)) return;
+              const yr = now.getFullYear();
+              setYearArchive(p=>({...p,[yr]:{
+                goals: Object.fromEntries(Object.entries(archived).filter(([k])=>!k.startsWith("loan_"))),
+                loans: Object.fromEntries(Object.entries(archived).filter(([k])=>k.startsWith("loan_"))),
+                wishlist: wishlistArchive,
+                closedAt: Date.now(),
+              }}));
+              setArchived({});
+              setWishlistArchive([]);
+            }} style={{...S.btnPrimary,fontSize:"0.72rem",padding:"7px 14px"}}>
+              close out {now.getFullYear()} →
+            </button>
+          </div>
+
+          {/* ── Previous years ───────────────────────────────────────────── */}
+          {Object.keys(yearArchive).length>0&&(
+            <div style={{marginTop:20}}>
+              <div style={{...S.serif,fontSize:"0.95rem",color:"#2a1f14",display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                previous years
+                <span style={{height:1,flex:1,background:"#e0d0be",display:"block"}}/>
+              </div>
+              {Object.entries(yearArchive).sort((a,b)=>b[0]-a[0]).map(([yr,data])=>{
+                const goalCount = Object.keys(data.goals||{}).length;
+                const loanCount = Object.keys(data.loans||{}).length;
+                const wishCount = (data.wishlist||[]).length;
+                const [open, setOpen] = [false, ()=>{}]; // local toggle — use index
+                return (
+                  <YearArchiveSection key={yr} year={yr} data={data} fmt={fmt} S={S}/>
+                );
+              })}
+            </div>
+          )}
+
           <div className="note">every dollar saved is a future you funded 🌱</div>
         </>)}
 
@@ -4387,7 +4494,32 @@ export default function App() {
 
           <div className="note">someday is closer than you think 🌿</div>
 
-          {/* Add deferred modal */}
+          {/* Wishlist archive — fulfilled items this year */}
+          {wishlistArchive.length>0&&(
+            <div style={{marginTop:16}}>
+              <div style={{...S.serif,fontSize:"0.95rem",color:"#2a1f14",display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                fulfilled this year
+                <span style={{height:1,flex:1,background:"#e0d0be",display:"block"}}/>
+              </div>
+              {wishlistArchive.map((item,i)=>{
+                const howEmoji = item.fulfilledHow==="cash"?"💵":item.fulfilledHow==="gift"?"🎁":item.fulfilledHow==="account"?"🛍️":"✓";
+                const howLabel = item.fulfilledHow==="cash"?"paid cash":item.fulfilledHow==="gift"?"gift":item.fulfilledHow==="account"?"purchased":"done";
+                return (
+                  <div key={item.id||i} style={{background:"rgba(252,247,238,0.96)",borderRadius:12,padding:"10px 14px",marginBottom:8,
+                    border:"0.5px solid rgba(210,190,160,0.5)",display:"flex",alignItems:"center",gap:12,opacity:0.8}}>
+                    <div style={{fontSize:"1.3rem"}}>{howEmoji}</div>
+                    <div style={{flex:1}}>
+                      <div style={{...S.sans,fontSize:"0.82rem",fontWeight:500,color:"#2a1f14"}}>{item.name}</div>
+                      <div style={{...S.sans,fontSize:"0.65rem",color:"#7a5c3a",marginTop:1}}>
+                        {howLabel}{item.price?` · up to ${fmt(parseFloat(item.price))}`:""}
+                        {item.fulfilledAt?` · ${new Date(item.fulfilledAt).toLocaleDateString("en-US",{month:"short",day:"numeric"})}`:""}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {showAddDeferred&&(
             <AddDeferredModal
               newDeferred={newDeferred}
@@ -4400,33 +4532,45 @@ export default function App() {
               onClose={()=>setShowAddDeferred(false)}/>
           )}
 
-          {/* Buy it modal */}
+          {/* Buy it modal — expanded with fulfillment type */}
           {buyDeferred&&(
             <Modal title="you got it! 🎉" onClose={()=>setBuyDeferred(null)} footer={null}>
-              <div style={{paddingTop:16,display:"flex",flexDirection:"column",gap:14,paddingBottom:20}}>
-                <div style={{textAlign:"center",padding:"12px 0"}}>
-                  <div style={{...S.serif,fontSize:"1.2rem",marginBottom:4}}>congrats on <em>{buyDeferred.name}</em> ✨</div>
-                  <div style={{...S.sans,fontSize:"0.78rem",color:"#7a5c3a"}}>want to log this as a transaction?</div>
+              <div style={{paddingTop:16,display:"flex",flexDirection:"column",gap:10,paddingBottom:20}}>
+                <div style={{textAlign:"center",padding:"8px 0 4px"}}>
+                  <div style={{fontSize:"2rem",marginBottom:6}}>{buyDeferred.emoji||"✨"}</div>
+                  <div style={{...S.serif,fontSize:"1.2rem",marginBottom:4}}>congrats on <em>{buyDeferred.name}</em></div>
+                  <div style={{...S.sans,fontSize:"0.78rem",color:"#7a5c3a"}}>how did you get it?</div>
                 </div>
                 {[
-                  {id:"log", label:"📝 log as transaction", desc:"record it in your monthly spending"},
-                  {id:"remove", label:"✅ just remove it", desc:"no transaction, just clear it from the list"},
+                  {id:"account", emoji:"🛍️", label:"bought it", desc:"log as transaction from an account"},
+                  {id:"cash",    emoji:"💵", label:"paid cash", desc:"no account deducted — cash purchase"},
+                  {id:"gift",    emoji:"🎁", label:"it was a gift", desc:"received it — no money spent"},
+                  {id:"remove",  emoji:"🗑️", label:"just remove", desc:"clear from list, no record kept"},
                 ].map(opt=>(
                   <button key={opt.id} onClick={()=>{
-                    if(opt.id==="log"){
-                      // Pre-fill tx with item name and price
-                      const prefillNote = `habit treat! ${buyDeferred.name}`;
-                      const prefillAmt  = buyDeferred.price ? String(buyDeferred.price) : "";
-                      setTreatTxPrefill({note:prefillNote, amount:prefillAmt});
+                    const fulfilledItem = {
+                      ...buyDeferred,
+                      fulfilledAt: Date.now(),
+                      fulfilledHow: opt.id,
+                    };
+                    if (opt.id==="account") {
+                      const prefillAmt = buyDeferred.price ? String(buyDeferred.price) : "";
+                      setTreatTxPrefill({note:buyDeferred.name, amount:prefillAmt});
                       setShowAddTxPage(true);
-                      // Also remove from pinned treats if it was pinned
-                      setPinnedTreats(p=>p.filter(t=>t.id!==buyDeferred.id));
+                      setWishlistArchive(p=>[...p, fulfilledItem]);
+                    } else if (opt.id==="cash" || opt.id==="gift") {
+                      setWishlistArchive(p=>[...p, fulfilledItem]);
                     }
+                    // remove from list and pinned treats
                     setDeferred(p=>p.filter(d=>d.id!==buyDeferred.id));
+                    setPinnedTreats(p=>p.filter(t=>t.id!==buyDeferred.id));
                     setBuyDeferred(null);
-                  }} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:10,cursor:"pointer",textAlign:"left",border:"1.5px solid #e0d0be",background:"#fff",...S.sans}}>
+                  }} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
+                    borderRadius:10,cursor:"pointer",textAlign:"left",
+                    border:"1.5px solid #e0d0be",background:"rgba(252,247,238,0.96)",...S.sans}}>
+                    <div style={{fontSize:"1.4rem",flexShrink:0}}>{opt.emoji}</div>
                     <div>
-                      <div style={{fontSize:"0.85rem",fontWeight:500}}>{opt.label}</div>
+                      <div style={{fontSize:"0.85rem",fontWeight:500,color:"#2a1f14"}}>{opt.label}</div>
                       <div style={{fontSize:"0.72rem",color:"#7a5c3a",marginTop:2}}>{opt.desc}</div>
                     </div>
                   </button>
