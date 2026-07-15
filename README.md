@@ -7,18 +7,20 @@ Pachira is a mindful personal finance app inspired by the Japanese concepts of m
 This digital space helps you cultivate a healthier relationship with money by organizing your accounts, tracking savings, and creating systems that support mindful financial habits. Emotional spending isn’t judged, it’s understood. This PWA gives you the tools to notice, reflect, and grow your capacity to hold and care for your money with intention. Pachira started as a spiritual successor to a budgeting Google Sheet called Money Loves Me — and grew into a full app that reflects how a real person actually thinks about money.
 
 
-| What it is  |
+___________________________What it is___________________________
 
 Pachira is a biweekly budgeting app designed for people who get paid on a schedule and want to plan their money across two pay periods per month, not just a single monthly view. It tracks spending, goals, loans, habits, and mood alongside your numbers.
 
 As a PWA, it can be installed to your phone and saves everything locally in your browser.
 
 
-| Development approach | Solo product + AI-assisted development |
+___________________________Development approach | Solo product + AI-assisted development___________________________
+
+
 Pachira was built collaboratively with AI as a development partner. I drove the product vision, UX decisions, feature design, data architecture, and all creative direction. AI served as a coding tutor and thought partner — helping me work through implementation challenges, learn unfamiliar patterns, and move faster than I could alone. All product decisions, the overall system design, and the final shape of the app are mine.
 
 
-| Features:  |
+___________________________Features:___________________________
 
 Budget
 
@@ -103,7 +105,7 @@ Import — restores from a backup file (confirms before overwriting)
 Find these in the sidebar (desktop) or at the bottom of the Goals tab (mobile).
 
 
-Design philosophy
+___________________________Design philosophy___________________________
 
 Pachira is designed to feel like a financial journal, not a dashboard. The visual language is warm parchment, olive green, and cream — intentionally different from the cold blues and grays of traditional finance apps. Wealth as cultivation and stewardship, not efficiency.
 
