@@ -4,19 +4,21 @@ Money is more than numbers and optimization. It reflects how we value ourselves 
 
 Pachira is a mindful personal finance app inspired by the Japanese concepts of mottainai (the regret of waste) and taisetsu ni suru (to cherish what you have). It helps you understand your spending habits, reduce unnecessary waste, and care for your money with greater intention.
 
-This digital space helps you cultivate a healthier relationship with money by organizing your accounts, tracking savings, and creating systems that support mindful financial habits. Emotional spending isn’t judged, it’s understood. This PWA gives you the tools to notice, reflect, and grow your capacity to hold and care for your money with intention.
-
-Pachira started as a spiritual successor to a budgeting Google Sheet called Money Loves Me — and grew into a full app that reflects how a real person actually thinks about money.
+This digital space helps you cultivate a healthier relationship with money by organizing your accounts, tracking savings, and creating systems that support mindful financial habits. Emotional spending isn’t judged, it’s understood. This PWA gives you the tools to notice, reflect, and grow your capacity to hold and care for your money with intention. Pachira started as a spiritual successor to a budgeting Google Sheet called Money Loves Me — and grew into a full app that reflects how a real person actually thinks about money.
 
 
-What it is
+| What it is  |
 
 Pachira is a biweekly budgeting app designed for people who get paid on a schedule and want to plan their money across two pay periods per month, not just a single monthly view. It tracks spending, goals, loans, habits, and mood alongside your numbers.
 
 As a PWA, it can be installed to your phone and saves everything locally in your browser.
 
 
-Features:
+| Development approach | Solo product + AI-assisted development |
+Pachira was built collaboratively with AI as a development partner. I drove the product vision, UX decisions, feature design, data architecture, and all creative direction. AI served as a coding tutor and thought partner — helping me work through implementation challenges, learn unfamiliar patterns, and move faster than I could alone. All product decisions, the overall system design, and the final shape of the app are mine.
+
+
+| Features:  |
 
 Budget
 
