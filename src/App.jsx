@@ -2308,6 +2308,7 @@ export default function App() {
   const [view,         setView]         = useState("home");
   const [period,       setPeriod]       = useState(autoPeriod); // for tracker
   const [pinnedBudgetItems, setPinnedBudgetItems] = useState([]); // [categoryItem] max 4
+  const [lastBackupAt, setLastBackupAt] = useState(0); // timestamp of last export
   const [periodSwitchConfirm, setPeriodSwitchConfirm] = useState(null); // {targetPeriod, targetLabel}
   const [ovPeriod,     setOvPeriod]     = useState(autoPeriod); // for overview
   const [showAddTx,    setShowAddTx]    = useState(false);
@@ -2394,6 +2395,7 @@ export default function App() {
         if (d.pinnedBudgetItems) setPinnedBudgetItems(d.pinnedBudgetItems);
         if (d.yearArchive)       setYearArchive(d.yearArchive);
         if (d.wishlistArchive)   setWishlistArchive(d.wishlistArchive);
+        if (d.lastBackupAt)      setLastBackupAt(d.lastBackupAt);
         if (d.yearPlan)  setYearPlan(d.yearPlan);
         if (d.splitRules) setSplitRules(d.splitRules);
       }
@@ -2406,7 +2408,7 @@ export default function App() {
     if (!loaded) return;
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() =>
-      saveData({txns,accounts,goals,loans,cats,catOrder,archived,goalOrder,mBudgets,mIncome,pBudgets,pPay,curMonth,habits,deferred,yearPlan,splitRules,pinnedTreats,recentWins,pinnedBudgetItems,yearArchive,wishlistArchive}), 700);
+      saveData({txns,accounts,goals,loans,cats,catOrder,archived,goalOrder,mBudgets,mIncome,pBudgets,pPay,curMonth,habits,deferred,yearPlan,splitRules,pinnedTreats,recentWins,pinnedBudgetItems,yearArchive,wishlistArchive,lastBackupAt}), 700);
     return () => clearTimeout(timerRef.current);
   }, [loaded,txns,accounts,goals,loans,cats,catOrder,archived,goalOrder,mBudgets,mIncome,pBudgets,pPay,curMonth,habits,deferred,yearPlan,splitRules]);
 
@@ -2690,9 +2692,11 @@ export default function App() {
 
 
   function exportData() {
+    const now_ts = Date.now();
     const data = {txns,accounts,goals,loans,cats,catOrder,archived,goalOrder,
       mBudgets,mIncome,pBudgets,pPay,curMonth,habits,deferred,yearPlan,
-      splitRules,pinnedTreats,recentWins,pinnedBudgetItems,yearArchive,wishlistArchive};
+      splitRules,pinnedTreats,recentWins,pinnedBudgetItems,yearArchive,wishlistArchive,
+      lastBackupAt:now_ts};
     const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
@@ -2701,6 +2705,7 @@ export default function App() {
     a.download = `pachira-backup-${date}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    setLastBackupAt(now_ts);
   }
 
   function importData(file) {
@@ -2733,6 +2738,9 @@ export default function App() {
         if (d.pinnedTreats)      setPinnedTreats(d.pinnedTreats);
         if (d.recentWins)        setRecentWins(d.recentWins);
         if (d.pinnedBudgetItems) setPinnedBudgetItems(d.pinnedBudgetItems);
+        if (d.yearArchive)       setYearArchive(d.yearArchive);
+        if (d.wishlistArchive)   setWishlistArchive(d.wishlistArchive);
+        if (d.lastBackupAt)      setLastBackupAt(d.lastBackupAt);
         alert("\u2713 Backup restored successfully!");
       } catch(err) {
         alert("Couldn\'t read that file. Make sure it\'s a valid Pachira backup.");
@@ -2972,6 +2980,12 @@ export default function App() {
     const hour = now.getHours();
     const timeGreet = hour<12?"good morning":hour<17?"good afternoon":"good evening";
 
+    // Backup nudge — show if never backed up or 7+ days since last backup
+    const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+    const backupOverdue = (Date.now() - lastBackupAt) > WEEK_MS;
+    const [backupDismissed, setBackupDismissed] = useState(false);
+    const showBackupNudge = backupOverdue && !backupDismissed;
+
     // Home always shows REAL today — unaffected by which budget month user is editing
     const realMonth   = now.getMonth();
     const realDay     = now.getDate();
@@ -3074,6 +3088,35 @@ export default function App() {
             );
           })()}
         </div>
+
+        {/* ── Backup nudge banner ─────────────────────────────────────── */}
+        {showBackupNudge&&(
+          <div style={{background:"rgba(200,168,130,0.15)",border:"1px solid rgba(200,168,130,0.4)",
+            borderRadius:12,padding:"10px 14px",marginBottom:16,
+            display:"flex",alignItems:"center",gap:10}}>
+            <div style={{fontSize:"1.1rem",flexShrink:0}}>💾</div>
+            <div style={{flex:1}}>
+              <div style={{...S.sans,fontSize:"0.78rem",fontWeight:500,color:"#2a1f14",marginBottom:2}}>
+                {lastBackupAt===0 ? "you haven't backed up yet" : "it's been a week since your last backup"}
+              </div>
+              <div style={{...S.sans,fontSize:"0.67rem",color:"#7a5c3a"}}>
+                your data lives in the browser — a backup keeps it safe
+              </div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:5,flexShrink:0}}>
+              <button onClick={()=>{ exportData(); setBackupDismissed(true); }}
+                style={{...S.sans,fontSize:"0.68rem",padding:"5px 10px",borderRadius:7,
+                  background:"#4a5820",color:"#f0e8d0",border:"none",cursor:"pointer",fontWeight:500}}>
+                export
+              </button>
+              <button onClick={()=>setBackupDismissed(true)}
+                style={{...S.sans,fontSize:"0.68rem",padding:"5px 10px",borderRadius:7,
+                  background:"transparent",color:"#7a5c3a",border:"1px solid #d0b890",cursor:"pointer"}}>
+                later
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Hero carousel — one card per checking account with a paycheckSplit */}
         {(()=>{
