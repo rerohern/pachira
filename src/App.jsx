@@ -2831,7 +2831,7 @@ export default function App() {
   function txSpend(t) { return BL.txSpend(t); }
 
   // ── BudgetRows component — tappable items drill down to transactions ──────
-  function BudgetRows({ periodTxs, budgetMap, period: p }) {
+  function BudgetRows({ periodTxs, budgetMap, period: p, pinnedBudgetItems, setPinnedBudgetItems }) {
     const [expanded, setExpanded] = useState(null); // "category:item"
 
     return orderedCats.map(key=>{
@@ -3219,6 +3219,7 @@ export default function App() {
                       setArchived(p=>({...p,[w.key]:{...goals[w.key],archivedAt:Date.now(),type:"goal"}}));
                       setGoals(p=>{ const n={...p}; delete n[w.key]; return n; });
                       setGoalOrder(p=>p.filter(k=>k!==w.key));
+                      setAccounts(p=>p.map(a=>({...a,savingsGoals:(a.savingsGoals||[]).filter(gk=>gk!==w.key)})));
                     } else {
                       setArchived(p=>({...p,[`loan_${w.key}`]:{...loans[w.key],archivedAt:Date.now(),type:"loan",name:w.name}}));
                       setLoans(p=>{ const n={...p}; delete n[w.key]; return n; });
@@ -3995,7 +3996,7 @@ export default function App() {
                 <BtnSm onClick={()=>setShowBE(period)}>✏️ edit budget</BtnSm>
               </div>
             }>budget tracker</SectionTitle>
-            <BudgetRows periodTxs={ptxs} budgetMap={pb} period={period}/>
+            <BudgetRows periodTxs={ptxs} budgetMap={pb} period={period} pinnedBudgetItems={pinnedBudgetItems} setPinnedBudgetItems={setPinnedBudgetItems}/>
           </div>
           {/* Right col: transactions */}
           <div>
@@ -4199,6 +4200,8 @@ export default function App() {
                         setArchived(p=>({...p,[key]:{...g,archivedAt:Date.now(),type:"goal"}}));
                         setGoals(p=>{ const n={...p}; delete n[key]; return n; });
                         setGoalOrder(p=>p.filter(k=>k!==key));
+                        // Also remove from linked account's savingsGoals list
+                        setAccounts(p=>p.map(a=>({...a,savingsGoals:(a.savingsGoals||[]).filter(gk=>gk!==key)})));
                       }} style={{color:"#4a7c59",fontSize:"0.66rem",border:"1.5px solid #8faa8b"}}>archive ✓</BtnSm>}
                       <BtnSm onClick={()=>deleteGoal(key)} style={{color:"#7a5c3a",fontSize:"0.66rem"}}>delete</BtnSm>
                     </div>
