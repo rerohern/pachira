@@ -1991,6 +1991,107 @@ function YearArchiveSection({ year, data, fmt, S }) {
   );
 }
 
+// ── BudgetRows — extracted to module level so React keeps stable identity
+function BudgetRows({ periodTxs, budgetMap, period: p, pinnedBudgetItems, setPinnedBudgetItems, orderedCats, cats, txSpend, fmt, pct, S }) {
+  const [expanded, setExpanded] = useState(null); // "category:item"
+
+  return orderedCats.map(key=>{
+    const cat = cats[key]; if(!cat) return null;
+    return (
+      <div key={key} style={{marginBottom:18}}>
+        <div style={{...S.sans,fontSize:"0.67rem",fontWeight:600,letterSpacing:"0.09em",textTransform:"uppercase",color:"#4a3020",marginBottom:7}}>{cat.label}</div>
+        <Card style={{padding:"7px 0",overflow:"hidden"}}>
+          {cat.items.map(item=>{
+            const b=budgetMap[item]||0;
+            const itemTxs=periodTxs.filter(t=>t.category===item);
+            const s=itemTxs.reduce((a,t)=>a+txSpend(t),0);
+            const left=b-s;
+            const over=s>b&&b>0;
+            const paid=b>0&&s>=b&&!over; // met budget exactly — "settled"
+            const hasTx=itemTxs.length>0;
+            const isPinned=pinnedBudgetItems.includes(item);
+            const canPin=pinnedBudgetItems.length<4;
+            const expandKey=`${key}:${item}`;
+            const isOpen=expanded===expandKey;
+            return (
+              <div key={item}>
+                <div className="brow" onClick={()=>setExpanded(isOpen?null:expandKey)}
+                  role={hasTx?"button":undefined} tabIndex={hasTx?0:undefined}
+                  onKeyDown={hasTx?(e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setExpanded(isOpen?null:expandKey);}})  :undefined}
+                  aria-expanded={hasTx?isOpen:undefined}
+                  style={{cursor:hasTx?"pointer":"default",userSelect:"none",
+                    background:isOpen?"rgba(143,170,139,0.12)":paid?"rgba(143,170,139,0.08)":"transparent",
+                    padding:"6px 13px",borderRadius:isOpen?"6px 6px 0 0":0,
+                    transition:"background 0.2s"}}>
+                  {b>0&&(
+                    <button onClick={(e)=>{
+                      e.stopPropagation();
+                      if(isPinned) setPinnedBudgetItems(p=>p.filter(i=>i!==item));
+                      else if(canPin) setPinnedBudgetItems(p=>[...p,item]);
+                    }} style={{background:"none",border:"none",cursor:canPin||isPinned?"pointer":"default",
+                      padding:"0 4px 0 0",fontSize:"0.78rem",flexShrink:0,
+                      color:isPinned?"#c8a882":"#d8cab0",opacity:!isPinned&&!canPin?0.3:1}}
+                      title={isPinned?"unpin from Home":canPin?"pin to Home":"max 4 pinned"}>
+                      {isPinned?"★":"☆"}
+                    </button>
+                  )}
+                  <div className="bn" style={{
+                    color:paid?"#4a6b42":isOpen?"#2c2116":"#4a3828",
+                    opacity:paid?0.8:1}}>
+                    {paid&&<span style={{marginRight:5,fontSize:"0.65rem"}}>✓</span>}
+                    {item}
+                    {hasTx&&<span style={{...S.sans,fontSize:"0.62rem",color:paid?"#6b8f64":"#7a5c3a",marginLeft:5,opacity:0.7}}>{itemTxs.length} tx</span>}
+                  </div>
+                  {b>0&&<div className="bbar"><div style={{height:"100%",width:`${Math.min(pct(s,b),100)}%`,background:over?"#b85050":paid?"#6b8f64":"#c8a882",borderRadius:3,transition:"width 0.3s"}}/></div>}
+                  <div className={`bamt${over?" ov":""}`} style={{color:paid?"#4a6b42":undefined}}>
+                    {b>0
+                      ? (over
+                          ? <>{fmt(Math.abs(left))} over<span style={{opacity:0.55}}> · {fmt(b)} budget</span></>
+                          : <>{fmt(left)} left<span style={{opacity:0.55}}> of {fmt(b)}</span></>)
+                      : fmt(s)}
+                  </div>
+                  {hasTx&&<span style={{...S.sans,fontSize:"0.65rem",color:paid?"#6b8f64":"#7a5c3a",flexShrink:0}}>{isOpen?"▲":"▼"}</span>}
+                </div>
+                {isOpen&&(
+                  <div style={{background:"#fdf8f2",padding:"8px 13px 10px",borderRadius:"0 0 6px 6px",borderTop:"1px dashed #e8ddd0"}}>
+                    {itemTxs.length===0
+                      ? <div style={{...S.sans,fontSize:"0.76rem",color:"#7a5c3a",fontStyle:"italic"}}>no transactions yet</div>
+                      : [...itemTxs].sort((a,b)=>{
+                          const dateDiff = b.date?.localeCompare(a.date||"")||0;
+                          if (dateDiff!==0) return dateDiff;
+                          return (b.createdAt||0)-(a.createdAt||0);
+                        }).map(tx=>{
+                          const feel=FEELINGS.find(f=>f.v===tx.feeling);
+                          const fromAcct=accounts.find(a=>a.id===(tx.from_account_id||tx.account));
+                          const toAcct=accounts.find(a=>a.id===tx.to_account_id);
+                          const dotClr = tx._isDeposit ? "#4a7c59" : (feel?.color||"#d4bfa0");
+                          return (
+                            <div key={tx.id} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:"1px solid #ede5da"}}>
+                              <div style={{width:7,height:7,borderRadius:"50%",background:dotClr,flexShrink:0}}/>
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{...S.sans,fontSize:"0.79rem",fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tx.notes||tx.category}</div>
+                                <div style={{...S.sans,fontSize:"0.65rem",color:"#7a5c3a"}}>
+                                  {tx.date&&`${tx.date} · `}
+                                  {fromAcct?.name}{toAcct&&` → ${toAcct.name}`}
+                                  {feel&&<span style={{color:feel.color}}> · {feel.label}</span>}
+                                </div>
+                              </div>
+                              <div style={{...S.serif,fontSize:"0.88rem",whiteSpace:"nowrap",color:tx._isDeposit?"#4a7c59":"#2c2116"}}>{tx._isDeposit?"+":""}{fmt(tx.amount)}</div>
+                            </div>
+                          );
+                        })
+                    }
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </Card>
+      </div>
+    );
+  });
+}
+
 // ── PaymentPlanModalInner — proper component so hooks work ───────────────────
 function PaymentPlanModalInner({ paymentPlanModal, loans, now, curMonth, MONTHS, fmt, S, addToRolloverPlan, setLoans, onClose }) {
   const { account, remaining, existingPlanKey } = paymentPlanModal;
@@ -2831,105 +2932,6 @@ export default function App() {
   function txSpend(t) { return BL.txSpend(t); }
 
   // ── BudgetRows component — tappable items drill down to transactions ──────
-  function BudgetRows({ periodTxs, budgetMap, period: p, pinnedBudgetItems, setPinnedBudgetItems }) {
-    const [expanded, setExpanded] = useState(null); // "category:item"
-
-    return orderedCats.map(key=>{
-      const cat = cats[key]; if(!cat) return null;
-      return (
-        <div key={key} style={{marginBottom:18}}>
-          <div style={{...S.sans,fontSize:"0.67rem",fontWeight:600,letterSpacing:"0.09em",textTransform:"uppercase",color:"#4a3020",marginBottom:7}}>{cat.label}</div>
-          <Card style={{padding:"7px 0",overflow:"hidden"}}>
-            {cat.items.map(item=>{
-              const b=budgetMap[item]||0;
-              const itemTxs=periodTxs.filter(t=>t.category===item);
-              const s=itemTxs.reduce((a,t)=>a+txSpend(t),0);
-              const left=b-s;
-              const over=s>b&&b>0;
-              const paid=b>0&&s>=b&&!over; // met budget exactly — "settled"
-              const hasTx=itemTxs.length>0;
-              const isPinned=pinnedBudgetItems.includes(item);
-              const canPin=pinnedBudgetItems.length<4;
-              const expandKey=`${key}:${item}`;
-              const isOpen=expanded===expandKey;
-              return (
-                <div key={item}>
-                  <div className="brow" onClick={()=>setExpanded(isOpen?null:expandKey)}
-                    role={hasTx?"button":undefined} tabIndex={hasTx?0:undefined}
-                    onKeyDown={hasTx?(e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setExpanded(isOpen?null:expandKey);}})  :undefined}
-                    aria-expanded={hasTx?isOpen:undefined}
-                    style={{cursor:hasTx?"pointer":"default",userSelect:"none",
-                      background:isOpen?"rgba(143,170,139,0.12)":paid?"rgba(143,170,139,0.08)":"transparent",
-                      padding:"6px 13px",borderRadius:isOpen?"6px 6px 0 0":0,
-                      transition:"background 0.2s"}}>
-                    {b>0&&(
-                      <button onClick={(e)=>{
-                        e.stopPropagation();
-                        if(isPinned) setPinnedBudgetItems(p=>p.filter(i=>i!==item));
-                        else if(canPin) setPinnedBudgetItems(p=>[...p,item]);
-                      }} style={{background:"none",border:"none",cursor:canPin||isPinned?"pointer":"default",
-                        padding:"0 4px 0 0",fontSize:"0.78rem",flexShrink:0,
-                        color:isPinned?"#c8a882":"#d8cab0",opacity:!isPinned&&!canPin?0.3:1}}
-                        title={isPinned?"unpin from Home":canPin?"pin to Home":"max 4 pinned"}>
-                        {isPinned?"★":"☆"}
-                      </button>
-                    )}
-                    <div className="bn" style={{
-                      color:paid?"#4a6b42":isOpen?"#2c2116":"#4a3828",
-                      opacity:paid?0.8:1}}>
-                      {paid&&<span style={{marginRight:5,fontSize:"0.65rem"}}>✓</span>}
-                      {item}
-                      {hasTx&&<span style={{...S.sans,fontSize:"0.62rem",color:paid?"#6b8f64":"#7a5c3a",marginLeft:5,opacity:0.7}}>{itemTxs.length} tx</span>}
-                    </div>
-                    {b>0&&<div className="bbar"><div style={{height:"100%",width:`${Math.min(pct(s,b),100)}%`,background:over?"#b85050":paid?"#6b8f64":"#c8a882",borderRadius:3,transition:"width 0.3s"}}/></div>}
-                    <div className={`bamt${over?" ov":""}`} style={{color:paid?"#4a6b42":undefined}}>
-                      {b>0
-                        ? (over
-                            ? <>{fmt(Math.abs(left))} over<span style={{opacity:0.55}}> · {fmt(b)} budget</span></>
-                            : <>{fmt(left)} left<span style={{opacity:0.55}}> of {fmt(b)}</span></>)
-                        : fmt(s)}
-                    </div>
-                    {hasTx&&<span style={{...S.sans,fontSize:"0.65rem",color:paid?"#6b8f64":"#7a5c3a",flexShrink:0}}>{isOpen?"▲":"▼"}</span>}
-                  </div>
-                  {isOpen&&(
-                    <div style={{background:"#fdf8f2",padding:"8px 13px 10px",borderRadius:"0 0 6px 6px",borderTop:"1px dashed #e8ddd0"}}>
-                      {itemTxs.length===0
-                        ? <div style={{...S.sans,fontSize:"0.76rem",color:"#7a5c3a",fontStyle:"italic"}}>no transactions yet</div>
-                        : [...itemTxs].sort((a,b)=>{
-                            const dateDiff = b.date?.localeCompare(a.date||"")||0;
-                            if (dateDiff!==0) return dateDiff;
-                            return (b.createdAt||0)-(a.createdAt||0);
-                          }).map(tx=>{
-                            const feel=FEELINGS.find(f=>f.v===tx.feeling);
-                            const fromAcct=accounts.find(a=>a.id===(tx.from_account_id||tx.account));
-                            const toAcct=accounts.find(a=>a.id===tx.to_account_id);
-                            const dotClr = tx._isDeposit ? "#4a7c59" : (feel?.color||"#d4bfa0");
-                            return (
-                              <div key={tx.id} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:"1px solid #ede5da"}}>
-                                <div style={{width:7,height:7,borderRadius:"50%",background:dotClr,flexShrink:0}}/>
-                                <div style={{flex:1,minWidth:0}}>
-                                  <div style={{...S.sans,fontSize:"0.79rem",fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tx.notes||tx.category}</div>
-                                  <div style={{...S.sans,fontSize:"0.65rem",color:"#7a5c3a"}}>
-                                    {tx.date&&`${tx.date} · `}
-                                    {fromAcct?.name}{toAcct&&` → ${toAcct.name}`}
-                                    {feel&&<span style={{color:feel.color}}> · {feel.label}</span>}
-                                  </div>
-                                </div>
-                                <div style={{...S.serif,fontSize:"0.88rem",whiteSpace:"nowrap",color:tx._isDeposit?"#4a7c59":"#2c2116"}}>{tx._isDeposit?"+":""}{fmt(tx.amount)}</div>
-                              </div>
-                            );
-                          })
-                      }
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </Card>
-        </div>
-      );
-    });
-  }
 
   // ── Touch-friendly drag-to-reorder ───────────────────────────────────────
   // Returns props to spread on each draggable item
@@ -3996,7 +3998,9 @@ export default function App() {
                 <BtnSm onClick={()=>setShowBE(period)}>✏️ edit budget</BtnSm>
               </div>
             }>budget tracker</SectionTitle>
-            <BudgetRows periodTxs={ptxs} budgetMap={pb} period={period} pinnedBudgetItems={pinnedBudgetItems} setPinnedBudgetItems={setPinnedBudgetItems}/>
+            <BudgetRows periodTxs={ptxs} budgetMap={pb} period={period}
+              pinnedBudgetItems={pinnedBudgetItems} setPinnedBudgetItems={setPinnedBudgetItems}
+              orderedCats={orderedCats} cats={cats} txSpend={txSpend} fmt={fmt} pct={pct} S={S}/>
           </div>
           {/* Right col: transactions */}
           <div>
