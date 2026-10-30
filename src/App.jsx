@@ -37,7 +37,8 @@ const PACHIRA_CSS = `
     .content-wrap{margin-left:220px;width:calc(100% - 220px);display:flex;flex-direction:column;min-height:100vh;background:transparent;}
     /* Top action bar — page title left, CTAs right */
     .mbar{background:rgba(237,228,216,0.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:10px 28px;display:flex;align-items:center;gap:8px;border-bottom:0.5px solid rgba(200,175,140,0.35);position:sticky;top:0;z-index:90;}
-    .ptab{font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:500;padding:7px 16px;border:none;cursor:pointer;background:transparent;color:#7a6048;border-radius:8px;transition:all 0.15s;}
+    .ptab{font-family:'DM Sans',sans-serif;font-size:0.78rem;font-weight:500;padding:6px 11px;border:none;cursor:pointer;background:transparent;color:#6b4c2a;border-radius:8px;transition:all 0.15s;white-space:nowrap;}
+    .tab-scroll::-webkit-scrollbar{display:none;}
     .ptab.on{background:#6b7c3f;color:#faf6f0;}
     .main{padding:28px 28px;flex:1;width:100%;box-sizing:border-box;overflow-x:hidden;}
     .desktop-shell{display:flex;flex:1;min-height:0;}
@@ -127,6 +128,24 @@ const PACHIRA_CSS = `
     }
 `;
 
+
+// ── Week utilities ────────────────────────────────────────────────────────────
+// Returns {mon, sun} as YYYY-MM-DD strings for the week containing `date` + offset weeks
+function getWeekBounds(baseDate, offsetWeeks = 0) {
+  const d = new Date(baseDate); d.setHours(12,0,0,0);
+  d.setDate(d.getDate() + offsetWeeks * 7);
+  const day = d.getDay(); // 0=Sun,1=Mon,...
+  const diff = (day === 0) ? -6 : 1 - day; // shift to Monday
+  const mon = new Date(d); mon.setDate(d.getDate() + diff);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  const fmt = dt => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+  return { mon: fmt(mon), sun: fmt(sun) };
+}
+// Returns all transactions from all periods in a month-keyed txns object within a date range
+function getTxsInRange(txns, startDate, endDate) {
+  const all = Object.values(txns).flat();
+  return all.filter(t => t.date >= startDate && t.date <= endDate);
+}
 
 // ── Storage ──────────────────────────────────────────────────────────────────
 const SK = "pachira_v1";
@@ -1930,6 +1949,232 @@ function MonthView({ p1txs, p2txs, income, cats, pBudgets, actBudg, curMonth, ye
   );
 }
 
+// ── WeekView — weekly spending review ────────────────────────────────────────
+function WeekView({ weekOffset, setWeekOffset, txns, accounts, goals, txSpend, fmt, now, S, cats, orderedCats }) {
+  const { mon, sun } = getWeekBounds(now, weekOffset);
+  const { mon: lastMon, sun: lastSun } = getWeekBounds(now, weekOffset - 1);
+
+  const weekTxs     = getTxsInRange(txns, mon, sun);
+  const lastWeekTxs = getTxsInRange(txns, lastMon, lastSun);
+
+  const expenses    = weekTxs.filter(t => !t._isDeposit && t.money_flow !== "transfer");
+  const deposits    = weekTxs.filter(t => t._isDeposit);
+  const goalTxs     = weekTxs.filter(t => t.money_flow === "transfer" && t.to_account_id && !t._isDeposit);
+  const lastExpenses= lastWeekTxs.filter(t => !t._isDeposit && t.money_flow !== "transfer");
+
+  const totalSpent    = expenses.reduce((s,t)  => s + txSpend(t), 0);
+  const totalReceived = deposits.reduce((s,t)  => s + (parseFloat(t.amount)||0), 0);
+  const totalSaved    = goalTxs.reduce((s,t)   => s + (parseFloat(t.amount)||0), 0);
+  const lastSpent     = lastExpenses.reduce((s,t) => s + txSpend(t), 0);
+  const vsLast        = totalSpent - lastSpent;
+
+  // Mood breakdown
+  const FEELINGS = [
+    { v:"happy",          emoji:"✨", color:"#8faa8b" },
+    { v:"necessary",      emoji:"🫡", color:"#c8a882" },
+    { v:"guilty", label:"guilty pleasure", emoji:"🫣", color:"#c8906e" },
+    { v:"regretted",      emoji:"😬", color:"#b85050" },
+  ];
+  const moodTotals = FEELINGS.map(f => {
+    const txs = expenses.filter(t => t.feeling === f.v);
+    const amt = txs.reduce((s,t) => s + txSpend(t), 0);
+    return { ...f, amt, count: txs.length };
+  });
+
+  // By category — ranked
+  const catSpend = {};
+  expenses.forEach(t => {
+    if (!t.category) return;
+    catSpend[t.category] = (catSpend[t.category]||0) + txSpend(t);
+  });
+  const rankedCats = Object.entries(catSpend)
+    .sort((a,b) => b[1]-a[1])
+    .slice(0, 8);
+
+  // By day — group transactions Mon→Sun
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mon+"T12:00:00"); d.setDate(d.getDate() + i);
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const dayTxs = weekTxs.filter(t => t.date === ds);
+    if (dayTxs.length > 0) {
+      days.push({ ds, label: d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}), txs: dayTxs });
+    }
+  }
+
+  const isCurrentWeek = weekOffset === 0;
+  const weekLabel = isCurrentWeek ? "this week"
+    : weekOffset === -1 ? "last week"
+    : `${new Date(mon+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})} – ${new Date(sun+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}`;
+
+  // Mini donut for mood
+  function MoodDonut() {
+    const R = 54, cx = 68, cy = 68, stroke = 22;
+    const inner = R - stroke/2;
+    const total = moodTotals.reduce((s,f) => s+f.amt, 0);
+    if (total === 0) return (
+      <svg width={136} height={136} viewBox="0 0 136 136">
+        <circle cx={cx} cy={cy} r={R} fill="none" stroke="#e8ddd0" strokeWidth={stroke}/>
+        <text x={cx} y={cy+5} textAnchor="middle" style={{fontSize:11,fill:"#a8906e",fontFamily:"DM Sans"}}>no spend</text>
+      </svg>
+    );
+    let angle = -Math.PI/2;
+    const arcs = moodTotals.filter(f=>f.amt>0).map(f => {
+      const sweep = (f.amt/total)*2*Math.PI;
+      const x1 = cx + R*Math.cos(angle), y1 = cy + R*Math.sin(angle);
+      angle += sweep;
+      const x2 = cx + R*Math.cos(angle), y2 = cy + R*Math.sin(angle);
+      const large = sweep > Math.PI ? 1 : 0;
+      return { d:`M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2}`, color:f.color, pct:Math.round(f.amt/total*100) };
+    });
+    return (
+      <svg width={136} height={136} viewBox="0 0 136 136">
+        <circle cx={cx} cy={cy} r={R} fill="none" stroke="#e8ddd0" strokeWidth={stroke}/>
+        {arcs.map((arc,i) => <path key={i} d={arc.d} fill="none" stroke={arc.color} strokeWidth={stroke} strokeLinecap="butt"/>)}
+        <text x={cx} y={cy-6} textAnchor="middle" style={{fontSize:13,fill:"#2a1f14",fontFamily:"DM Serif Display",fontWeight:400}}>{fmt(totalSpent)}</text>
+        <text x={cx} y={cy+10} textAnchor="middle" style={{fontSize:10,fill:"#7a5c3a",fontFamily:"DM Sans"}}>{expenses.length} tx</text>
+      </svg>
+    );
+  }
+
+  return (
+    <div style={{padding:"0 0 40px"}}>
+      {/* ── Week selector ─────────────────────────────────────────────── */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,gap:12}}>
+        <button onClick={()=>setWeekOffset(w=>w-1)}
+          style={{...S.sans,background:"rgba(252,247,238,0.96)",border:"1px solid rgba(210,190,160,0.5)",
+            borderRadius:10,padding:"7px 14px",cursor:"pointer",color:"#4a3020",fontSize:"0.82rem"}}>
+          ‹ prev
+        </button>
+        <div style={{textAlign:"center"}}>
+          <div style={{...S.serif,fontSize:"1.05rem",color:"#2a1f14"}}>{weekLabel}</div>
+          <div style={{...S.sans,fontSize:"0.67rem",color:"#7a5c3a",marginTop:2}}>
+            {new Date(mon+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})} – {new Date(sun+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}
+          </div>
+        </div>
+        <button onClick={()=>setWeekOffset(w=>Math.min(0,w+1))}
+          disabled={weekOffset===0}
+          style={{...S.sans,background:"rgba(252,247,238,0.96)",border:"1px solid rgba(210,190,160,0.5)",
+            borderRadius:10,padding:"7px 14px",cursor:weekOffset===0?"default":"pointer",
+            color:weekOffset===0?"#c8b89a":"#4a3020",fontSize:"0.82rem"}}>
+          next ›
+        </button>
+      </div>
+
+      {/* ── Summary strip ─────────────────────────────────────────────── */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+        {[
+          {label:"spent",    val:fmt(totalSpent),    sub: vsLast===0?"same as last week": vsLast>0?`+${fmt(vsLast)} vs last week`:`${fmt(Math.abs(vsLast))} less than last week`, subColor: vsLast>0?"#b85050":vsLast<0?"#4a7c59":"#7a5c3a"},
+          {label:"received", val:fmt(totalReceived), sub:`${deposits.length} deposit${deposits.length!==1?"s":""}`, subColor:"#7a5c3a"},
+          {label:"saved",    val:fmt(totalSaved),    sub:`${goalTxs.length} transfer${goalTxs.length!==1?"s":""}`, subColor:"#4a7c59"},
+          {label:"transactions", val:String(weekTxs.length), sub:`across ${days.length} day${days.length!==1?"s":""}`, subColor:"#7a5c3a"},
+        ].map(c=>(
+          <div key={c.label} style={{background:"rgba(252,247,238,0.96)",border:"0.5px solid rgba(210,190,160,0.5)",
+            borderRadius:12,padding:"12px 14px",boxShadow:"0 2px 12px rgba(60,35,10,0.06)"}}>
+            <div style={{...S.sans,fontSize:"0.6rem",fontWeight:500,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7a5c3a",marginBottom:4}}>{c.label}</div>
+            <div style={{...S.serif,fontSize:"1.3rem",color:"#2a1f14",lineHeight:1}}>{c.val}</div>
+            <div style={{...S.sans,fontSize:"0.62rem",color:c.subColor,marginTop:3}}>{c.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Mood breakdown ────────────────────────────────────────────── */}
+      {expenses.length > 0 && (
+        <div style={{background:"rgba(252,247,238,0.96)",border:"0.5px solid rgba(210,190,160,0.5)",
+          borderRadius:14,padding:"16px",marginBottom:16,boxShadow:"0 2px 12px rgba(60,35,10,0.06)"}}>
+          <div style={{...S.sans,fontSize:"0.67rem",fontWeight:500,letterSpacing:"0.1em",textTransform:"uppercase",color:"#7a5c3a",marginBottom:12,textAlign:"center"}}>mood breakdown</div>
+          <div style={{display:"flex",alignItems:"center",gap:16}}>
+            <MoodDonut/>
+            <div style={{flex:1,display:"flex",flexDirection:"column",gap:8}}>
+              {moodTotals.map(f=>(
+                <div key={f.v} style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:f.color,flexShrink:0}}/>
+                  <div style={{flex:1}}>
+                    <div style={{...S.sans,fontSize:"0.72rem",color:"#2a1f14"}}>{f.emoji} {f.label||f.v}</div>
+                    <div style={{...S.sans,fontSize:"0.62rem",color:"#7a5c3a"}}>{f.count} tx · {fmt(f.amt)}</div>
+                  </div>
+                  <div style={{...S.sans,fontSize:"0.72rem",color:"#a8906e"}}>
+                    {moodTotals.reduce((s,x)=>s+x.amt,0)>0?Math.round(f.amt/moodTotals.reduce((s,x)=>s+x.amt,0)*100):0}%
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── By category ───────────────────────────────────────────────── */}
+      {rankedCats.length > 0 && (
+        <div style={{marginBottom:16}}>
+          <div style={{...S.serif,fontSize:"0.95rem",color:"#2a1f14",display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+            where it went
+            <span style={{height:1,flex:1,background:"#e0d0be",display:"block"}}/>
+          </div>
+          <div style={{background:"rgba(252,247,238,0.96)",border:"0.5px solid rgba(210,190,160,0.5)",
+            borderRadius:14,overflow:"hidden",boxShadow:"0 2px 12px rgba(60,35,10,0.06)"}}>
+            {rankedCats.map(([cat,amt],i)=>(
+              <div key={cat} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
+                borderBottom:i<rankedCats.length-1?"0.5px solid rgba(210,190,160,0.3)":"none"}}>
+                <div style={{...S.sans,fontSize:"0.7rem",color:"#a8906e",width:18,textAlign:"right",flexShrink:0}}>{i+1}</div>
+                <div style={{...S.sans,fontSize:"0.82rem",color:"#2a1f14",flex:1,textTransform:"capitalize"}}>{cat}</div>
+                <div style={{...S.serif,fontSize:"0.9rem",color:"#4a3020"}}>{fmt(amt)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Transactions by day ───────────────────────────────────────── */}
+      {days.length > 0 ? (
+        <div>
+          <div style={{...S.serif,fontSize:"0.95rem",color:"#2a1f14",display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+            day by day
+            <span style={{height:1,flex:1,background:"#e0d0be",display:"block"}}/>
+          </div>
+          {days.map(({ds,label,txs})=>(
+            <div key={ds} style={{marginBottom:14}}>
+              <div style={{...S.sans,fontSize:"0.67rem",fontWeight:600,letterSpacing:"0.08em",
+                textTransform:"uppercase",color:"#7a5c3a",marginBottom:6}}>{label}</div>
+              <div style={{background:"rgba(252,247,238,0.96)",border:"0.5px solid rgba(210,190,160,0.5)",
+                borderRadius:12,overflow:"hidden",boxShadow:"0 2px 10px rgba(60,35,10,0.05)"}}>
+                {txs.map((t,i)=>{
+                  const isDeposit = t._isDeposit;
+                  const amt = isDeposit ? parseFloat(t.amount)||0 : txSpend(t);
+                  const acct = accounts.find(a=>a.id===t.from_account_id);
+                  const FEEL_COLORS = {"happy":"#8faa8b","necessary":"#c8a882","guilty":"#c8906e","regretted":"#b85050"};
+                  return (
+                    <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",
+                      borderBottom:i<txs.length-1?"0.5px solid rgba(210,190,160,0.25)":"none"}}>
+                      {!isDeposit && <div style={{width:7,height:7,borderRadius:"50%",flexShrink:0,
+                        background:FEEL_COLORS[t.feeling]||"#c8a882"}}/>}
+                      {isDeposit && <div style={{width:7,height:7,borderRadius:"50%",flexShrink:0,background:"#8faa8b"}}/>}
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{...S.sans,fontSize:"0.8rem",color:"#2a1f14",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                          {t.notes||t.category||"transaction"}
+                        </div>
+                        {t.category&&t.notes&&<div style={{...S.sans,fontSize:"0.62rem",color:"#7a5c3a"}}>{t.category}{acct?` · ${acct.name}`:""}</div>}
+                      </div>
+                      <div style={{...S.serif,fontSize:"0.88rem",color:isDeposit?"#4a7c59":amt>0?"#4a3020":"#4a7c59",flexShrink:0}}>
+                        {isDeposit?"+":"-"}{fmt(amt)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{textAlign:"center",padding:"40px 20px"}}>
+          <div style={{fontSize:"2rem",marginBottom:8}}>🌿</div>
+          <div style={{...S.serif,fontSize:"1.1rem",color:"#2a1f14",marginBottom:6}}>no transactions this week</div>
+          <div style={{...S.sans,fontSize:"0.78rem",color:"#7a5c3a"}}>log some transactions to see your weekly review</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── YearArchiveSection — collapsible year summary ────────────────────────────
 function YearArchiveSection({ year, data, fmt, S }) {
   const [open, setOpen] = React.useState(false);
@@ -2215,7 +2460,7 @@ function RightPanel({ view, period, isMobile, accounts, goals, goalOrder, loans,
             {fmt(Math.abs((ptxs||[]).filter(t=>!t._isDeposit).reduce((s,t)=>s+(parseFloat(t.amount)||0),0)))}
           </div>
           <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:"0.68rem",color:"#7a5c3a"}}>
-            spent · {period==="first"?"1st–15th":"16th–end"}
+            spent · {period==="week"?"this week":period==="first"?"1st–15th":"16th–end"}
           </div>
         </div>
         <div className="rp-section">
@@ -2408,6 +2653,7 @@ export default function App() {
   // ── Ephemeral state ────────────────────────────────────────────────────────
   const [view,         setView]         = useState("home");
   const [period,       setPeriod]       = useState(autoPeriod); // for tracker
+  const [weekOffset,   setWeekOffset]   = useState(0); // 0=this week, -1=last week, etc.
   const [pinnedBudgetItems, setPinnedBudgetItems] = useState([]); // [categoryItem] max 4
   const [lastBackupAt, setLastBackupAt] = useState(0); // timestamp of last export
   const [periodSwitchConfirm, setPeriodSwitchConfirm] = useState(null); // {targetPeriod, targetLabel}
@@ -3995,7 +4241,7 @@ export default function App() {
             <SectionTitle action={
               <div style={{display:"flex",gap:6}}>
                 <BtnSm onClick={()=>setShowLI(true)}>⚙️ categories</BtnSm>
-                <BtnSm onClick={()=>setShowBE(period)}>✏️ edit budget</BtnSm>
+                {period!=="week"&&<BtnSm onClick={()=>setShowBE(period)}>✏️ edit budget</BtnSm>}
               </div>
             }>budget tracker</SectionTitle>
             <BudgetRows periodTxs={ptxs} budgetMap={pb} period={period}
@@ -5209,7 +5455,7 @@ export default function App() {
                   <div key={row.key} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:10,marginBottom:5,background:"#fff",border:"1px solid #e8ddd0"}}>
                     <div style={{flex:1,...S.sans,fontSize:"0.8rem",textTransform:"capitalize",color:"#2a1f14"}}>{row.emoji||""} {row.label}</div>
                     {diff!==0&&<div style={{...S.sans,fontSize:"0.65rem",color:diff<0?"#4a7c59":"#b85050",background:diff<0?"#8faa8b12":"#c88b8b12",borderRadius:4,padding:"1px 6px"}}>{diff>0?"+":""}{fmt(diff)}</div>}
-                    <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    <div className="tab-scroll" style={{display:"flex",alignItems:"center",gap:2,overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
                       <button onClick={()=>updateAdj(row.key,-10)} style={{width:26,height:26,borderRadius:7,border:"1.5px solid #e0d0be",background:"transparent",cursor:"pointer",...S.sans,fontSize:"1rem",color:"#4a3020",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
                       <div style={{...S.sans,fontSize:"0.8rem",fontWeight:500,minWidth:48,textAlign:"center",color:cur<base?"#4a7c59":"#2c2116"}}>{fmt(cur)}</div>
                       <button onClick={()=>updateAdj(row.key,10)} style={{width:26,height:26,borderRadius:7,border:"1.5px solid #e0d0be",background:"transparent",cursor:"pointer",...S.sans,fontSize:"1rem",color:"#4a3020",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
@@ -5749,7 +5995,7 @@ export default function App() {
               <button onClick={()=>setCurMonth(m=>(m+11)%12)} style={{...S.sans,background:"none",border:"none",cursor:"pointer",color:"#4a3020",fontSize:"1rem",padding:"0 4px"}}>‹</button>
               <div style={{...S.serif,fontSize:"1rem"}}>Budget <span style={{color:"#8a5c2a"}}>|</span> {MONTHS[curMonth]}</div>
               <button onClick={()=>setCurMonth(m=>(m+1)%12)} style={{...S.sans,background:"none",border:"none",cursor:"pointer",color:"#4a3020",fontSize:"1rem",padding:"0 4px"}}>›</button>
-              {period!=="year" && (editPay ? (
+              {period!=="year" && period!=="week" && (editPay ? (
                 <div style={{display:"flex",alignItems:"center",gap:4}}>
                   <input autoFocus
                     style={{...S.input,width:76,padding:"3px 6px",fontSize:"0.8rem",textAlign:"right"}}
@@ -5784,13 +6030,14 @@ export default function App() {
               ))}
             </div>
             <div style={{display:"flex",alignItems:"center",gap:4}}>
-              {[{id:"month",label:"Month"},{id:"first",label:"1st–15th"},{id:"second",label:"16th–end"},{id:"year",label:"Year"}].map(p=>(
+              {[{id:"month",label:"Month"},{id:"first",label:"1st–15th"},{id:"second",label:"16th–end"},{id:"week",label:"Week"},{id:"year",label:"Year"}].map(p=>(
                 <button key={p.id} className={`ptab${period===p.id?" on":""}`} onClick={()=>{
                   const isPeriodSwitch = (p.id==="first"||p.id==="second") && (period==="first"||period==="second") && p.id!==period;
                   if (isPeriodSwitch && pinnedBudgetItems.length>0) {
                     setPeriodSwitchConfirm({targetPeriod:p.id, targetLabel:p.label});
                   } else {
                     setPeriod(p.id);
+                    if (p.id==="week") setWeekOffset(0); // always start at current week
                   }
                   setShowAddTx(false);setEditPay(false);
                 }}>
@@ -5817,7 +6064,8 @@ export default function App() {
               orderedCats={orderedCats} catOrder={catOrder} setCatOrder={setCatOrder}
               setMIncome={setMIncome} setPBudgets={setPBudgets} setPPay={setPPay}
               setYearPlan={setYearPlan} txSpend={txSpend}/>}
-            {view==="tracker"    && period!=="year" && period!=="month" && <TrackerView/>}
+            {view==="tracker"    && period==="week"                     && <WeekView weekOffset={weekOffset} setWeekOffset={setWeekOffset} txns={txns} accounts={accounts} goals={goals} txSpend={txSpend} fmt={fmt} now={now} S={S} cats={cats} orderedCats={orderedCats}/>}
+            {view==="tracker"    && period!=="year" && period!=="month" && period!=="week" && <TrackerView/>}
             {view==="tracker"    && period==="year"  && <YearView/>}
             {view==="intentions" && <IntentionsView/>}
           </div>
@@ -5828,7 +6076,7 @@ export default function App() {
             accounts={accounts} goals={goals} goalOrder={goalOrder}
             loans={loans} txns={txns} txSpend={txSpend}
             curMonth={curMonth} mk={mk}
-            ptxs={period==="first"?p1txs:p2txs}
+            ptxs={period==="week"?getTxsInRange(txns,getWeekBounds(now,weekOffset).mon,getWeekBounds(now,weekOffset).sun):(period==="first"?p1txs:p2txs)}
             allTxs={allTxs}
             habits={habits} now={now}
             onDeposit={()=>setShowDeposit(true)}
