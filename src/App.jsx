@@ -2237,7 +2237,7 @@ function YearArchiveSection({ year, data, fmt, S }) {
 }
 
 // ── BudgetRows — extracted to module level so React keeps stable identity
-function BudgetRows({ periodTxs, budgetMap, period: p, pinnedBudgetItems, setPinnedBudgetItems, orderedCats, cats, txSpend, fmt, pct, S }) {
+function BudgetRows({ periodTxs, budgetMap, period: p, pinnedBudgetItems, setPinnedBudgetItems, orderedCats, cats, txSpend, fmt, pct, S, accounts }) {
   const [expanded, setExpanded] = useState(null); // "category:item"
 
   return orderedCats.map(key=>{
@@ -4246,7 +4246,7 @@ export default function App() {
             }>budget tracker</SectionTitle>
             <BudgetRows periodTxs={ptxs} budgetMap={pb} period={period}
               pinnedBudgetItems={pinnedBudgetItems} setPinnedBudgetItems={setPinnedBudgetItems}
-              orderedCats={orderedCats} cats={cats} txSpend={txSpend} fmt={fmt} pct={pct} S={S}/>
+              orderedCats={orderedCats} cats={cats} txSpend={txSpend} fmt={fmt} pct={pct} S={S} accounts={accounts}/>
           </div>
           {/* Right col: transactions */}
           <div>
@@ -6231,6 +6231,7 @@ export default function App() {
 
             // Cross-period sync is one-directional: saving 1st-15th auto-fills 16th-end
             // as (monthly - first). Monthly = what was previously set across both periods.
+            let adjItems = []; // second-half items whose amount changed due to the sync
             if (thisPeriod === "first") {
               const prevFirst  = pBudgets[`${curMonth}_first`]  || {};
               const prevSecond = pBudgets[`${curMonth}_second`] || {};
@@ -6241,6 +6242,9 @@ export default function App() {
                 const monthly = prevMonthly > 0 ? prevMonthly : (actBudg[k] ?? 0);
                 otherOverrides[k] = Math.max(0, Math.round((monthly - v) * 100) / 100);
               });
+              adjItems = Object.keys(otherOverrides)
+                .filter(k=>Math.abs((prevSecond[k]??0)-otherOverrides[k])>0.005)
+                .map(k=>({key:k,oldAmt:prevSecond[k]??0,newAmt:otherOverrides[k]}));
               setPBudgets(p=>({...p,[`${curMonth}_second`]:otherOverrides}));
               const monthlyInc = (pPay[`${curMonth}_first`] ?? Math.round((mIncome[curMonth]??DEF_INCOME)/2))
                                + (pPay[`${curMonth}_second`] ?? Math.round((mIncome[curMonth]??DEF_INCOME)/2));
