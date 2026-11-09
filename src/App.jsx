@@ -2025,12 +2025,14 @@ function WeekView({ weekOffset, setWeekOffset, txns, accounts, goals, txSpend, f
       angle += sweep;
       const x2 = cx + R*Math.cos(angle), y2 = cy + R*Math.sin(angle);
       const large = sweep > Math.PI ? 1 : 0;
-      return { d:`M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2}`, color:f.color, pct:Math.round(f.amt/total*100) };
+      return { d:`M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2}`, color:f.color, pct:Math.round(f.amt/total*100), full: f.amt/total >= 0.999 };
     });
     return (
       <svg width={136} height={136} viewBox="0 0 136 136">
         <circle cx={cx} cy={cy} r={R} fill="none" stroke="#e8ddd0" strokeWidth={stroke}/>
-        {arcs.map((arc,i) => <path key={i} d={arc.d} fill="none" stroke={arc.color} strokeWidth={stroke} strokeLinecap="butt"/>)}
+        {arcs.map((arc,i) => arc.full
+          ? <circle key={i} cx={cx} cy={cy} r={R} fill="none" stroke={arc.color} strokeWidth={stroke}/>
+          : <path key={i} d={arc.d} fill="none" stroke={arc.color} strokeWidth={stroke} strokeLinecap="butt"/>)}
         <text x={cx} y={cy-6} textAnchor="middle" style={{fontSize:13,fill:"#2a1f14",fontFamily:"DM Serif Display",fontWeight:400}}>{fmt(totalSpent)}</text>
         <text x={cx} y={cy+10} textAnchor="middle" style={{fontSize:10,fill:"#7a5c3a",fontFamily:"DM Sans"}}>{expenses.length} tx</text>
       </svg>
@@ -2170,6 +2172,120 @@ function WeekView({ weekOffset, setWeekOffset, txns, accounts, goals, txSpend, f
           <div style={{...S.serif,fontSize:"1.1rem",color:"#2a1f14",marginBottom:6}}>no transactions this week</div>
           <div style={{...S.sans,fontSize:"0.78rem",color:"#7a5c3a"}}>log some transactions to see your weekly review</div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// Sunday → wrap-up nudge; Monday → point at last week; other days → nothing
+function weekNudgeFor(now) {
+  const dow = now.getDay();
+  if (dow === 0) return { text: "wrap up this week", offset: 0 };
+  if (dow === 1) return { text: "last week is ready to review", offset: -1 };
+  return { text: null, offset: 0 };
+}
+
+// ── WeekGlance — compact "this week" card for Home ───────────────────────────
+const WEEK_MOODS = [
+  { v:"happy",     emoji:"✨", color:"#8faa8b" },
+  { v:"necessary", emoji:"🫡", color:"#c8a882" },
+  { v:"guilty",    emoji:"🫣", color:"#c8906e", label:"guilty pleasure" },
+  { v:"regretted", emoji:"😬", color:"#b85050" },
+];
+
+function WeekGlance({ txns, now, txSpend, fmt, S, onOpen }) {
+  const { mon, sun } = getWeekBounds(now, 0);
+  const { mon: lastMon, sun: lastSun } = getWeekBounds(now, -1);
+  const weekTxs = getTxsInRange(txns, mon, sun);
+  const lastTxs = getTxsInRange(txns, lastMon, lastSun);
+
+  const isExpense = t => !t._isDeposit && t.money_flow !== "transfer";
+  const sumAmt = arr => arr.reduce((s,t) => s + (parseFloat(t.amount)||0), 0);
+
+  const expenses  = weekTxs.filter(isExpense);
+  const spent     = expenses.reduce((s,t) => s + txSpend(t), 0);
+  const lastSpent = lastTxs.filter(isExpense).reduce((s,t) => s + txSpend(t), 0);
+  const received  = sumAmt(weekTxs.filter(t => t._isDeposit));
+  const saved     = sumAmt(weekTxs.filter(t => t.money_flow === "transfer" && t.to_account_id && !t._isDeposit));
+  const delta     = spent - lastSpent;
+
+  const moods = WEEK_MOODS
+    .map(m => ({ ...m, amt: expenses.filter(t => t.feeling === m.v).reduce((s,t) => s + txSpend(t), 0) }))
+    .filter(m => m.amt > 0);
+  const moodTotal = moods.reduce((s,m) => s + m.amt, 0);
+  const topMood = [...moods].sort((a,b) => b.amt - a.amt)[0];
+
+  const fmtDay = d => new Date(d + "T12:00:00").toLocaleDateString("en-US", { month:"short", day:"numeric" });
+
+  // Mini donut
+  const size = 76, cx = 38, cy = 38, R = 28, stroke = 11;
+  let angle = -Math.PI / 2;
+  const arcs = moodTotal > 0 && moods.length > 1 ? moods.map(m => {
+    const sweep = (m.amt / moodTotal) * 2 * Math.PI;
+    const x1 = cx + R * Math.cos(angle), y1 = cy + R * Math.sin(angle);
+    angle += sweep;
+    const x2 = cx + R * Math.cos(angle), y2 = cy + R * Math.sin(angle);
+    return { d: `M ${x1} ${y1} A ${R} ${R} 0 ${sweep > Math.PI ? 1 : 0} 1 ${x2} ${y2}`, color: m.color };
+  }) : [];
+
+  const open = () => onOpen && onOpen();
+  const cardStyle = { ...S.card, cursor:"pointer", padding:"14px 16px" };
+  const nudge = weekNudgeFor(now);
+
+  return (
+    <div className="card-grain" role="button" tabIndex={0}
+      aria-label={nudge.offset === -1 ? "open last week's review" : "open full week review"}
+      onClick={open}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } }}
+      style={cardStyle}>
+      {nudge.text && (
+        <div style={{ ...S.sans, display:"inline-block", fontSize:"0.68rem", fontWeight:500, color:"#4a6b42",
+          background:"rgba(143,170,139,0.16)", borderRadius:8, padding:"4px 10px", marginBottom:10 }}>
+          {`${nudge.text} →`}
+        </div>
+      )}
+      {weekTxs.length === 0 ? (
+        <div style={{ textAlign:"center", padding:"10px 0" }}>
+          <div style={{ ...S.sans, fontSize:"0.8rem", color:"#7a5c3a", fontStyle:"italic" }}>
+            nothing logged yet this week 🌿
+          </div>
+        </div>
+      ) : (
+        <>
+          <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+            {expenses.length > 0 && (
+              <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink:0 }} aria-hidden="true">
+                <circle cx={cx} cy={cy} r={R} fill="none" stroke="#e8ddd0" strokeWidth={stroke}/>
+                {moods.length === 1 && <circle cx={cx} cy={cy} r={R} fill="none" stroke={moods[0].color} strokeWidth={stroke}/>}
+                {arcs.map((a,i) => <path key={i} d={a.d} fill="none" stroke={a.color} strokeWidth={stroke}/>)}
+              </svg>
+            )}
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ ...S.sans, fontSize:"0.6rem", fontWeight:500, letterSpacing:"0.08em", textTransform:"uppercase", color:"#7a5c3a", marginBottom:3 }}>
+                spent · {fmtDay(mon)} – {fmtDay(sun)}
+              </div>
+              <div style={{ ...S.serif, fontSize:"1.7rem", lineHeight:1, color:"#2a1f14" }}>{fmt(spent)}</div>
+              <div style={{ ...S.sans, fontSize:"0.65rem", marginTop:4,
+                color: delta > 0 ? "#b85050" : delta < 0 ? "#4a7c59" : "#7a5c3a" }}>
+                {delta === 0 ? "same as last week"
+                  : delta > 0 ? `${fmt(delta)} more than last week`
+                  : `${fmt(Math.abs(delta))} less than last week`}
+              </div>
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:18, marginTop:12, paddingTop:10, borderTop:"0.5px solid rgba(210,190,160,0.4)", flexWrap:"wrap" }}>
+            {[
+              { label:"received", val: fmt(received) },
+              { label:"saved",    val: fmt(saved) },
+              ...(topMood ? [{ label:"mostly", val: `${topMood.emoji} ${topMood.label || topMood.v}` }] : []),
+            ].map(s => (
+              <div key={s.label}>
+                <div style={{ ...S.sans, fontSize:"0.58rem", letterSpacing:"0.08em", textTransform:"uppercase", color:"#7a5c3a", marginBottom:2 }}>{s.label}</div>
+                <div style={{ ...S.sans, fontSize:"0.8rem", fontWeight:500, color:"#2a1f14" }}>{s.val}</div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -2406,6 +2522,8 @@ function RightPanel({ view, period, isMobile, accounts, goals, goalOrder, loans,
   const grand = validTxs.reduce((s,t)=>s+(parseFloat(t.amount)||0),0);
   const cx=60, cy=60, R=44, r=28;
   function arc(pct, startAngle) {
+    // One mood at 100%: start and end points coincide, so an arc draws nothing. Draw a full ring instead.
+    if (pct >= 0.999) return `M ${cx-R} ${cy} A ${R} ${R} 0 1 1 ${cx+R} ${cy} A ${R} ${R} 0 1 1 ${cx-R} ${cy} Z M ${cx-r} ${cy} A ${r} ${r} 0 1 0 ${cx+r} ${cy} A ${r} ${r} 0 1 0 ${cx-r} ${cy} Z`;
     const angle = pct * 2 * Math.PI;
     const x1 = cx + R*Math.sin(startAngle), y1 = cy - R*Math.cos(startAngle);
     const x2 = cx + R*Math.sin(startAngle+angle), y2 = cy - R*Math.cos(startAngle+angle);
@@ -2460,7 +2578,7 @@ function RightPanel({ view, period, isMobile, accounts, goals, goalOrder, loans,
             {fmt(Math.abs((ptxs||[]).filter(t=>!t._isDeposit).reduce((s,t)=>s+(parseFloat(t.amount)||0),0)))}
           </div>
           <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:"0.68rem",color:"#7a5c3a"}}>
-            spent · {period==="week"?"this week":period==="first"?"1st–15th":"16th–end"}
+            spent · {period==="first"?"1st–15th":"16th–end"}
           </div>
         </div>
         <div className="rp-section">
@@ -3227,6 +3345,8 @@ export default function App() {
   function HomeView() {
     const hour = now.getHours();
     const timeGreet = hour<12?"good morning":hour<17?"good afternoon":"good evening";
+    // Monday opens last week; every other day opens this week
+    const openWeekReview = () => { setWeekOffset(weekNudgeFor(now).offset); setView("week"); window.scrollTo(0,0); };
 
     // Backup nudge — show if never backed up or 7+ days since last backup
     const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -3509,6 +3629,19 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {/* ── This week glance ────────────────────────────────────────────── */}
+        <div style={{marginBottom:20}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+            <div style={{...S.serif,fontSize:"1rem"}}>🌿 this week</div>
+            <button onClick={openWeekReview}
+              style={{...S.sans,fontSize:"0.7rem",color:"#8a5c2a",background:"none",border:"none",cursor:"pointer"}}>
+              full review →
+            </button>
+          </div>
+          <WeekGlance txns={txns} now={now} txSpend={txSpend} fmt={fmt} S={S}
+            onOpen={openWeekReview}/>
+        </div>
 
         {/* ── Pinned treat cards (earned from habit completions) ─────────── */}
         {pinnedTreats.length > 0 && (
@@ -4241,7 +4374,7 @@ export default function App() {
             <SectionTitle action={
               <div style={{display:"flex",gap:6}}>
                 <BtnSm onClick={()=>setShowLI(true)}>⚙️ categories</BtnSm>
-                {period!=="week"&&<BtnSm onClick={()=>setShowBE(period)}>✏️ edit budget</BtnSm>}
+                <BtnSm onClick={()=>setShowBE(period)}>✏️ edit budget</BtnSm>
               </div>
             }>budget tracker</SectionTitle>
             <BudgetRows periodTxs={ptxs} budgetMap={pb} period={period}
@@ -5952,7 +6085,7 @@ export default function App() {
         </div>
         <nav className="sidebar-nav">
           {navItems.map(({v,label})=>(
-            <button key={v} className={`sn${view===v?" on":""}`} onClick={()=>setView(v)}>{label}</button>
+            <button key={v} className={`sn${(view===v||(v==="home"&&view==="week"))?" on":""}`} onClick={()=>setView(v)}>{label}</button>
           ))}
         </nav>
         <div className="sidebar-actions">
@@ -5995,7 +6128,7 @@ export default function App() {
               <button onClick={()=>setCurMonth(m=>(m+11)%12)} style={{...S.sans,background:"none",border:"none",cursor:"pointer",color:"#4a3020",fontSize:"1rem",padding:"0 4px"}}>‹</button>
               <div style={{...S.serif,fontSize:"1rem"}}>Budget <span style={{color:"#8a5c2a"}}>|</span> {MONTHS[curMonth]}</div>
               <button onClick={()=>setCurMonth(m=>(m+1)%12)} style={{...S.sans,background:"none",border:"none",cursor:"pointer",color:"#4a3020",fontSize:"1rem",padding:"0 4px"}}>›</button>
-              {period!=="year" && period!=="week" && (editPay ? (
+              {period!=="year" && (editPay ? (
                 <div style={{display:"flex",alignItems:"center",gap:4}}>
                   <input autoFocus
                     style={{...S.input,width:76,padding:"3px 6px",fontSize:"0.8rem",textAlign:"right"}}
@@ -6030,14 +6163,13 @@ export default function App() {
               ))}
             </div>
             <div style={{display:"flex",alignItems:"center",gap:4}}>
-              {[{id:"month",label:"Month"},{id:"first",label:"1st–15th"},{id:"second",label:"16th–end"},{id:"week",label:"Week"},{id:"year",label:"Year"}].map(p=>(
+              {[{id:"month",label:"Month"},{id:"first",label:"1st–15th"},{id:"second",label:"16th–end"},{id:"year",label:"Year"}].map(p=>(
                 <button key={p.id} className={`ptab${period===p.id?" on":""}`} onClick={()=>{
                   const isPeriodSwitch = (p.id==="first"||p.id==="second") && (period==="first"||period==="second") && p.id!==period;
                   if (isPeriodSwitch && pinnedBudgetItems.length>0) {
                     setPeriodSwitchConfirm({targetPeriod:p.id, targetLabel:p.label});
                   } else {
                     setPeriod(p.id);
-                    if (p.id==="week") setWeekOffset(0); // always start at current week
                   }
                   setShowAddTx(false);setEditPay(false);
                 }}>
@@ -6064,8 +6196,16 @@ export default function App() {
               orderedCats={orderedCats} catOrder={catOrder} setCatOrder={setCatOrder}
               setMIncome={setMIncome} setPBudgets={setPBudgets} setPPay={setPPay}
               setYearPlan={setYearPlan} txSpend={txSpend}/>}
-            {view==="tracker"    && period==="week"                     && <WeekView weekOffset={weekOffset} setWeekOffset={setWeekOffset} txns={txns} accounts={accounts} goals={goals} txSpend={txSpend} fmt={fmt} now={now} S={S} cats={cats} orderedCats={orderedCats}/>}
-            {view==="tracker"    && period!=="year" && period!=="month" && period!=="week" && <TrackerView/>}
+            {view==="week" && (
+              <div style={{maxWidth:640}}>
+                <button onClick={()=>setView("home")} aria-label="back to home"
+                  style={{...S.sans,background:"none",border:"none",cursor:"pointer",color:"#7a5c3a",fontSize:"0.82rem",padding:"0 0 14px",display:"flex",alignItems:"center",gap:6}}>
+                  ← home
+                </button>
+                <WeekView weekOffset={weekOffset} setWeekOffset={setWeekOffset} txns={txns} accounts={accounts} goals={goals} txSpend={txSpend} fmt={fmt} now={now} S={S} cats={cats} orderedCats={orderedCats}/>
+              </div>
+            )}
+            {view==="tracker"    && period!=="year" && period!=="month" && <TrackerView/>}
             {view==="tracker"    && period==="year"  && <YearView/>}
             {view==="intentions" && <IntentionsView/>}
           </div>
@@ -6076,7 +6216,7 @@ export default function App() {
             accounts={accounts} goals={goals} goalOrder={goalOrder}
             loans={loans} txns={txns} txSpend={txSpend}
             curMonth={curMonth} mk={mk}
-            ptxs={period==="week"?getTxsInRange(txns,getWeekBounds(now,weekOffset).mon,getWeekBounds(now,weekOffset).sun):(period==="first"?p1txs:p2txs)}
+            ptxs={period==="first"?p1txs:p2txs}
             allTxs={allTxs}
             habits={habits} now={now}
             onDeposit={()=>setShowDeposit(true)}
@@ -6125,7 +6265,7 @@ export default function App() {
 
             {/* Right 2 nav items */}
             {mobileNavItems.slice(2,4).map(({v,short})=>(
-              <button key={v} className={`nb${view===v?" on":""}`} onClick={()=>{ setView(v); setFabOpen(false); }}>
+              <button key={v} className={`nb${(view===v||(v==="home"&&view==="week"))?" on":""}`} onClick={()=>{ setView(v); setFabOpen(false); }}>
                 <span className="ni">{short}</span>
               </button>
             ))}
