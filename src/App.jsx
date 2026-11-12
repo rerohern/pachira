@@ -107,7 +107,7 @@ const PACHIRA_CSS = `
       .fab-open{background:#6b7c3f;}
       .fab-menu{position:absolute;bottom:52px;left:50%;transform:translateX(-50%) translateY(8px) scale(0.9);display:flex;flex-direction:column;gap:8px;align-items:center;transition:all 0.22s cubic-bezier(0.34,1.56,0.64,1);pointer-events:none;opacity:0;}
       .fab-menu.vis{pointer-events:auto;opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
-      .fab-pill{white-space:nowrap;padding:10px 22px;border-radius:22px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:500;box-shadow:0 4px 16px rgba(44,33,22,0.22);width:160px;text-align:center;}
+      .fab-pill{white-space:nowrap;padding:10px 22px;border-radius:22px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:500;box-shadow:0 4px 16px rgba(44,33,22,0.22);width:180px;text-align:center;}
       .fab-backdrop{position:fixed;inset:0;z-index:99;background:rgba(44,33,22,0.25);}
       .g3{grid-template-columns:1fr 1fr;}
       .tracker-grid{grid-template-columns:1fr;min-width:0;width:100%;}
@@ -4949,18 +4949,6 @@ export default function App() {
               })}
             </div>
           )}
-          {showAddDeferred&&(
-            <AddDeferredModal
-              newDeferred={newDeferred}
-              setNewDeferred={setNewDeferred}
-              onAdd={()=>{
-                setDeferred(p=>[...p,{id:uid(),name:newDeferred.name.trim(),price:newDeferred.price,priceMax:newDeferred.priceMax,notes:newDeferred.notes,addedAt:Date.now()}]);
-                setNewDeferred({name:"",price:"",priceMax:"",notes:""});
-                setShowAddDeferred(false);
-              }}
-              onClose={()=>setShowAddDeferred(false)}/>
-          )}
-
           {/* Buy it modal — expanded with fulfillment type */}
           {buyDeferred&&(
             <Modal title="you got it! 🎉" onClose={()=>setBuyDeferred(null)} footer={null}>
@@ -6251,6 +6239,11 @@ export default function App() {
                 onClick={()=>{ setFabOpen(false); prevViewRef.current=view; setShowAddTxPage(true); }}>
                 ✏️ log transaction
               </button>
+              <button className="fab-pill"
+                style={{background:"#f3e6d3",color:"#1e140a"}}
+                onClick={()=>{ setFabOpen(false); setShowAddDeferred(true); }}>
+                ✨ add to wishlist
+              </button>
             </div>
 
               <button className={`fab${fabOpen?" fab-open":""}`} onClick={()=>setFabOpen(o=>!o)}>
@@ -6275,6 +6268,19 @@ export default function App() {
       </div>{/* end content-wrap */}
 
       {/* ── Modals ──────────────────────────────────────────────────────────── */}
+
+      {/* ── Add to wishlist — App level so the + menu can open it from any screen ── */}
+      {showAddDeferred&&(
+        <AddDeferredModal
+          newDeferred={newDeferred}
+          setNewDeferred={setNewDeferred}
+          onAdd={()=>{
+            setDeferred(p=>[...p,{id:uid(),name:newDeferred.name.trim(),price:newDeferred.price,priceMax:newDeferred.priceMax,notes:newDeferred.notes,addedAt:Date.now()}]);
+            setNewDeferred({name:"",price:"",priceMax:"",notes:""});
+            setShowAddDeferred(false);
+          }}
+          onClose={()=>setShowAddDeferred(false)}/>
+      )}
 
       {/* ── Deposit flow ── */}
       {showDeposit&&(
