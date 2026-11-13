@@ -2,9 +2,32 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pachira</title>
+    <title>Pachira</title>
+    <meta name="description" content="A warm, personal budgeting app. Money loves you back." />
+
+    <!-- Favicons (files live in /public) -->
+    <link rel="icon" type="image/png" href="/public/pachira-favicon.png"/>
+    <link rel="apple-touch-icon" sizes="180x180" href="/public/pachira-apple-touch-icon.png" />
+
+    <!-- Add to home screen / PWA -->
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#241b10" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Pachira" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- Link previews (Open Graph + Twitter). og:image and og:url MUST be full https:// URLs.
+         Replace YOUR-DOMAIN below with your real Vercel/custom domain. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Pachira" />
+    <meta property="og:title" content="Pachira" />
+    <meta property="og:description" content="A warm, personal budgeting app. Money loves you back." />
+    <meta property="og:url" content="https://pachira-iota.vercel.app/" />
+    <meta property="og:image" content="/public/pachira-og-card.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
   </head>
   <body>
     <div id="root"></div>
