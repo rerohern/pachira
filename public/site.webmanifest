@@ -1,0 +1,13 @@
+{
+  "name": "Pachira",
+  "short_name": "Pachira",
+  "description": "a warm, personal budgeting app",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ede4d8",
+  "theme_color": "#241b10",
+  "icons": [
+    { "src": "/public/pachira-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/public/pachira-icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
